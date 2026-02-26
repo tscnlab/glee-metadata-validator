@@ -12,5 +12,5 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . /repo
 
-ENTRYPOINT ["python", "gleam_validator.py"]
+ENTRYPOINT ["python", "/repo/gleam_validator.py"]
 CMD ["datapackage.json"]
