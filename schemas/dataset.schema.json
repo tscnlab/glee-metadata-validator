@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dataset Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "dataset_internal_id": {
+      "type": "string",
+      "description": "Unique identifier of dataset"
+    },
+    "dataset_instructions": {
+      "type": "string",
+      "description": "Description of the instructions given to study participants before or during the collection of this data set"
+    },
+    "dataset_crossref": {
+      "type": "object",
+      "description": "Crossreferencing information linking to study, participant, and device",
+      "additionalProperties": false,
+      "properties": {
+        "dataset_crossref_study_id": { "type": "string", "description": "Internal ID for study" },
+        "dataset_crossref_participant_id": { "type": "string", "description": "Internal ID for participant" },
+        "dataset_crossref_device_id": { "type": "string", "description": "Internal ID for device" }
+      },
+      "required": [
+        "dataset_crossref_study_id",
+        "dataset_crossref_participant_id",
+        "dataset_crossref_device_id"
+      ]
+    },
+    "dataset_device_location": {
+      "type": "string",
+      "description": "Anatomical location of the acquisition device"
+    },
+    "dataset_sampling_interval": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Sampling interval"
+    },
+    "dataset_datetime": {
+      "type": "object",
+      "description": "Information about datetime columns in the dataset",
+      "additionalProperties": false,
+      "properties": {
+        "dataset_datetime_date": {
+          "type": "string",
+          "description": "Name of the date column or datetime column"
+        },
+        "dataset_datetime_dateformat": {
+          "type": "string",
+          "description": "Formatting of the date column (e.g., 'YYYY/MM/DD') or datetime column (e.g., 'YYYY/MM/DD HH:MM:SS')"
+        },
+        "dataset_datetime_time": {
+          "type": "string",
+          "description": "Name of the time column (only if separate from date)"
+        },
+        "dataset_datetime_timeformat": {
+          "type": "string",
+          "description": "Formatting of the time column (e.g., 'HH:MM:SS') (only if separate from date)"
+        }
+      },
+      "required": ["dataset_datetime_date", "dataset_datetime_dateformat"],
+      "allOf": [
+        {
+          "if": { "required": ["dataset_datetime_time"] },
+          "then": { "required": ["dataset_datetime_timeformat"] }
+        }
+      ]
+    },
+    "dataset_illuminance": {
+      "type": "string",
+      "description": "Column name in the data that contains photopic illuminance"
+    },
+    "dataset_melEDI": {
+      "type": "string",
+      "description": "Column name in the data that contains melanopic EDI (D65)"
+    },
+    "dataset_timezone": {
+      "type": "string",
+      "description": "Timezone of data collection (Olson database)"
+    },
+    "dataset_location": {
+      "type": "array",
+      "description": "Latitude/Longitude of data collection",
+      "items": { "type": "string" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "dataset_file": {
+      "type": "array",
+      "description": "Dataset descriptors",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataset_file_names": {
+            "type": "array",
+            "description": "File names corresponding",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "dataset_file_format": {
+            "type": "string",
+            "description": "File format"
+          },
+          "dataset_file_encoding": {
+            "type": "array",
+            "description": "File text encoding (e.g., UTF-8)",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "dataset_file_timezone": {
+            "type": "string",
+            "description": "Timezone of data (Olson database)"
+          },
+          "dataset_file_auxiliary": {
+            "type": "boolean",
+            "description": "Indicator whether the data files contain light data (or auxiliary data)"
+          },
+          "dataset_file_preprocessing": {
+            "type": "object",
+            "description": "Preprocessing information",
+            "additionalProperties": false,
+            "properties": {
+              "dataset_file_preprocessing_bol": {
+                "type": "boolean",
+                "description": "Indicator whether preprocessing was applied"
+              },
+              "dataset_file_preprocessing_desc": {
+                "type": "array",
+                "description": "Description of what preprocessing was applied",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["dataset_file_preprocessing_bol"],
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "dataset_file_preprocessing_bol": { "const": true } },
+                  "required": ["dataset_file_preprocessing_bol"]
+                },
+                "then": {
+                  "required": ["dataset_file_preprocessing_desc"],
+                  "properties": {
+                    "dataset_file_preprocessing_desc": { "minItems": 1 }
+                  }
+                }
+              }
+            ]
+          },
+          "dataset_file_variables": {
+            "type": "array",
+            "description": "Variables contained in the dataset, units and location (column)",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "dataset_file_variables_name": {
+                  "type": "string",
+                  "description": "Variable name as contained in the dataset"
+                },
+                "dataset_file_variables_labels": {
+                  "type": "string",
+                  "description": "Variable name as clear name"
+                },
+                "dataset_file_variables_units": {
+                  "type": "string",
+                  "description": "Unit"
+                },
+                "dataset_file_variables_calibration": {
+                  "type": "string",
+                  "description": "Description of transformation that should be applied to the variable for calibration, based only on researchers' calibration"
+                }
+              },
+              "required": [
+                "dataset_file_variables_name",
+                "dataset_file_variables_labels",
+                "dataset_file_variables_units"
+              ]
+            }
+          }
+        },
+        "required": [
+          "dataset_file_names",
+          "dataset_file_format",
+          "dataset_file_encoding",
+          "dataset_file_timezone",
+          "dataset_file_auxiliary",
+          "dataset_file_preprocessing",
+          "dataset_file_variables"
+        ]
+      }
+    }
+  },
+  "required": [
+    "dataset_internal_id",
+    "dataset_instructions",
+    "dataset_crossref",
+    "dataset_device_location",
+    "dataset_sampling_interval",
+    "dataset_datetime",
+    "dataset_illuminance",
+    "dataset_timezone",
+    "dataset_location",
+    "dataset_file"
+  ]
+}

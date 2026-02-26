@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Device/Sensor Datasheet Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "datasheet_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*(-v[0-9]+(\\.[0-9]+)*)?$",
+      "description": "foreign key devices reference"
+    },
+    "datasheet_version": {
+    "type": "string",
+    "description": "Version label for this datasheet, e.g. 1.0"
+    }, 
+    "datasheet_manufacturer": {
+      "type": "string",
+      "description": "Manufacturer of the sensor/device"
+    },
+    "datasheet_type": {
+      "type": "string",
+      "description": "Type of the sensor/device"
+    },
+    "datasheet_model": {
+      "type": "string",
+      "description": "Model of the sensor/device"
+    },
+    "datasheet_calibration_interval": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Required device calibration interval (in days)"
+    },
+    "datasheet_calibration_spectral_sensitivity": {
+      "type": "array",
+      "description": "Information about spectral sensitivity calibration",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "datasheet_calibration_spectral_sensitivity_wavelength": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Wavelength (nm)"
+          },
+          "datasheet_calibration_spectral_sensitivity_relative": {
+            "type": "number",
+            "description": "Relative spectral sensitivity at given wavelength (unitless or fraction)"
+          }
+        },
+        "required": [
+          "datasheet_calibration_spectral_sensitivity_wavelength",
+          "datasheet_calibration_spectral_sensitivity_relative"
+        ]
+      }
+    },
+    "datasheet_calibration_linearity": {
+      "type": "string",
+      "description": "Information about linearity calibration"
+    },
+    "datasheet_calibration_directional_response": {
+      "type": "string",
+      "description": "Information about directional response calibration"
+    },
+    "datasheet_calibration_range": {
+      "type": "string",
+      "description": "Information about response range"
+    },
+    "datasheet_channel": {
+      "type": "array",
+      "description": "Information on channels",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "datasheet_channel_nr": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of channel"
+          },
+          "datasheet_channel_name": {
+            "type": "string",
+            "description": "Name of the channel as appearing in the export (file)"
+          },
+          "datasheet_channel_unit": {
+            "type": "string",
+            "description": "Unit of channel"
+          },
+          "datasheet_channel_description": {
+            "type": "string",
+            "description": "Description of channel"
+          }
+        },
+        "required": ["datasheet_channel_nr", "datasheet_channel_name"]
+      }
+    }
+  },
+  "required": [
+    "datasheet_id",
+    "datasheet_manufacturer",
+    "datasheet_type",
+    "datasheet_model",
+    "datasheet_calibration_interval",
+    "datasheet_calibration_spectral_sensitivity",
+    "datasheet_calibration_linearity",
+    "datasheet_calibration_directional_response",
+    "datasheet_calibration_range"
+  ], 
+  "examples": [
+    {
+      "datasheet_id": "lumitech-lt100-v1.0",
+      "datasheet_version": "1.0",
+      "datasheet_manufacturer": "Lumitech",
+      "datasheet_type": "Wearable Light Sensor",
+      "datasheet_model": "LT-100",
+      "datasheet_calibration_interval": 365,
+      "datasheet_calibration_spectral_sensitivity": [
+        { "datasheet_calibration_spectral_sensitivity_wavelength": 450, "datasheet_calibration_spectral_sensitivity_relative": 0.85 },
+        { "datasheet_calibration_spectral_sensitivity_wavelength": 555, "datasheet_calibration_spectral_sensitivity_relative": 1.0 },
+        { "datasheet_calibration_spectral_sensitivity_wavelength": 650, "datasheet_calibration_spectral_sensitivity_relative": 0.42 }
+      ],
+      "datasheet_calibration_linearity": "±2% over 0–50,000 lux",
+      "datasheet_calibration_directional_response": "±10% (cosine corrected)",
+      "datasheet_calibration_range": "0–100,000 lux",
+      "datasheet_channel": [
+        { "datasheet_channel_nr": 1, "datasheet_channel_name": "broadband", "datasheet_channel_unit": "lux", "datasheet_channel_description": "Broadband visible light" },
+        { "datasheet_channel_nr": 2, "datasheet_channel_name": "blue",      "datasheet_channel_unit": "µW/cm²", "datasheet_channel_description": "Blue band (~470 nm)" }
+      ]
+    }
+  ]
+}
