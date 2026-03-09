@@ -131,6 +131,38 @@ def index_datasheet_ids(datasheets):
                 ids.add(dsid)
     return ids
 
+def build_sanitized_package_descriptor(datapackage_path: str):
+    """
+    Load datapackage.json and return a sanitized descriptor for Frictionless Package loading.
+
+    We do NOT trust dataset-local profile files for package construction.
+    The canonical profile is enforced separately by validate_profile().
+
+    For Package(...) we only need a safe descriptor so that:
+      - tabular resources can be read/validated
+      - resources can be accessed by name
+      - custom JSON entity resource profiles do not trigger remote resolution
+    """
+    with open(datapackage_path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+
+    desc = json.loads(json.dumps(raw))  # deep copy
+
+    # Force canonical generic package profile for Frictionless parsing
+    desc["profile"] = "data-package"
+
+    for res in desc.get("resources", []):
+        profile = res.get("profile")
+
+        # Keep built-in tabular resources as-is
+        if profile == "tabular-data-resource":
+            continue
+
+        # Any custom/local JSON resource profile gets normalized to generic data-resource
+        # because JSON schema validation is handled separately by our validator.
+        res["profile"] = "data-resource"
+
+    return raw, desc
 
 # ----------------------------
 # Profile validation
@@ -364,12 +396,34 @@ def validate_sensor_datasheet_ids(devices, known_datasheet_ids):
                 )
     return errors
 
+# ----------------------------
+# Canonical core schemas bundled in the validator image
+# ----------------------------
+VALIDATOR_ROOT = Path(__file__).parent.resolve()
+CANONICAL_SCHEMAS_DIR = VALIDATOR_ROOT / "schemas"
+
+CANONICAL_PROFILE_PATH = CANONICAL_SCHEMAS_DIR / "gleam-dp-profile.json"
+
+# Core JSON resources must always validate against these bundled schemas
+CANONICAL_CORE_JSON_SCHEMAS = {
+    "study": CANONICAL_SCHEMAS_DIR / "study.schema.json",
+    "datasets": CANONICAL_SCHEMAS_DIR / "dataset.schema.json",
+    "devices": CANONICAL_SCHEMAS_DIR / "device.schema.json",
+    "device_datasheets": CANONICAL_SCHEMAS_DIR / "device_datasheet.schema.json",
+}
+
+# Core tabular resources must always validate against these bundled schemas
+CANONICAL_CORE_TABULAR_SCHEMAS = {
+    "participants": CANONICAL_SCHEMAS_DIR / "participants.schema.json",
+    "participant_characteristics": CANONICAL_SCHEMAS_DIR / "participant_characteristics.schema.json",
+}
 
 # ----------------------------
 # Main
 # ----------------------------
 CORE_REQUIRED = {"study", "participants", "datasets", "devices", "device_datasheets"}
 CORE_OPTIONAL = {"participant_characteristics"}  # optional now
+ALL_CORE = CORE_REQUIRED | CORE_OPTIONAL
 
 
 def validate_crossrefs(datapackage_path: str):
@@ -385,11 +439,14 @@ def validate_crossrefs(datapackage_path: str):
         "validator_version": get_validator_version(),
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "datapackage": datapackage_path,
+        "core_schema_source": "container",
+        "profile_source": "container",
         "warnings": [],
         "errors": []
     }
     # ---- Load package (error if datapackage missing or invalid)
     package = None
+    raw_dp_descriptor = None
 
     try:
         if not os.path.exists(datapackage_path):
@@ -398,7 +455,8 @@ def validate_crossrefs(datapackage_path: str):
                 "path": ["<root>"]
             })
         else:
-            package = Package(datapackage_path, basepath=base_path)
+            raw_dp_descriptor, sanitized_dp_descriptor = build_sanitized_package_descriptor(datapackage_path)
+            package = Package(sanitized_dp_descriptor, basepath=base_path)
 
     except Exception as e:
         errors.append({
@@ -407,12 +465,26 @@ def validate_crossrefs(datapackage_path: str):
         })
 
     if package: 
-        # ---- Profile validation (keep collecting errors even if profile is missing/invalid)
-        profile_path = os.path.join(base_path, "schemas", "gleam-dp-profile.json")
+
+        dp_descriptor = raw_dp_descriptor or package.to_descriptor()
+        declared_profile = dp_descriptor.get("profile")
+
+        if declared_profile and declared_profile != "data-package":
+            warnings.append(
+                f"[profile] Dataset declares profile '{declared_profile}', "
+                "but canonical validator profile is enforced"
+            )
+        # ---- Profile validation using canonical bundled profile
+        profile_path = str(CANONICAL_PROFILE_PATH)
         if os.path.exists(profile_path):
             errors += validate_profile(datapackage_path, profile_path)
         else:
-            warnings.append(f"[profile] No local profile found at {profile_path}; skipping profile validation")
+            errors.append(
+                {
+                    "message": f"[profile] Canonical profile missing inside validator image: {profile_path}",
+                    "path": ["<root>"],
+                }
+            )
 
         # ---- Helper: require a resource exists
         def require_resource(name: str):
@@ -436,32 +508,84 @@ def validate_crossrefs(datapackage_path: str):
         # Phase 1: Validate resources (tabular + JSON)
         # ----------------------------
         def validate_tabular_resource(res):
-            """Validate a tabular resource if it declares schema; enforce schema/path for core resources."""
+            """
+            Validate a tabular resource.
+
+            Core tabular resources use canonical schemas bundled in the validator image.
+            Additional tabular resources may use dataset-declared schemas.
+            """
             desc = res.to_descriptor()
             name = res.name
-            schema_decl = desc.get("schema")
+            dataset_schema_decl = desc.get("schema")
             path_rel = desc.get("path")
 
-            # Path existence checks
             if not path_rel:
-                # Resource declared but unusable
                 errors.append({"message": f"[{name}] Missing 'path' in resource descriptor", "path": ["resources"]})
                 return
 
-            data_exists = path_exists(base_path, path_rel)
+            data_path = resolve_local_path(base_path, path_rel)
+            data_exists = os.path.exists(data_path)
 
-            if schema_decl:
-                # schema declared => data MUST exist
-                if not data_exists:
+            if not data_exists:
+                errors.append(
+                    {
+                        "message": f"[{name}] Data path does not exist: {data_path}",
+                        "path": ["resources"],
+                    }
+                )
+                return
+
+            # ---- Core tabular resources: ignore dataset schema, force canonical schema
+            if name in CANONICAL_CORE_TABULAR_SCHEMAS:
+                # participant_characteristics has a foreign key to participants, so we validate
+                # that pair together later in a package context.
+                if name in {"participants", "participant_characteristics"}:
+                    return
+                
+                forced_schema_path = str(CANONICAL_CORE_TABULAR_SCHEMAS[name])
+
+                if not os.path.exists(forced_schema_path):
                     errors.append(
                         {
-                            "message": f"[{name}] Declares 'schema' but data path does not exist: {resolve_local_path(base_path, path_rel)}",
+                            "message": f"[{name}] Canonical Table Schema missing inside validator image: {forced_schema_path}",
                             "path": ["resources"],
                         }
                     )
                     return
 
-                # Run frictionless validation
+                try:
+                    desc_override = dict(desc)
+                    desc_override["path"] = path_rel
+
+                    # Load canonical schema contents directly so Frictionless does not
+                    # reject an absolute schema path as "unsafe"
+                    with open(forced_schema_path, "r", encoding="utf-8") as sf:
+                        desc_override["schema"] = json.load(sf)
+
+                    forced_pkg = Package({"resources": [desc_override]}, basepath=base_path)
+                    forced_res = forced_pkg.resources[0]
+                    fr_report = forced_res.validate()
+
+                    for task in fr_report.to_dict().get("tasks", []):
+                        for err in task.get("errors", []):
+                            errors.append(
+                                {
+                                    "message": f"[{name}] {err['message']}",
+                                    "path": err.get("fieldName", "<row>"),
+                                }
+                            )
+
+                except Exception as e:
+                    errors.append(
+                        {
+                            "message": f"[{name}] Failed validating core tabular resource with canonical schema: {e}",
+                            "path": ["resources"],
+                        }
+                    )
+                return
+
+            # ---- Additional tabular resources: use dataset-declared schema
+            if dataset_schema_decl:
                 fr_report = res.validate()
                 for task in fr_report.to_dict().get("tasks", []):
                     for err in task.get("errors", []):
@@ -472,29 +596,22 @@ def validate_crossrefs(datapackage_path: str):
                             }
                         )
             else:
-                # no schema declared
-                if name in CORE_REQUIRED:
+                if name in ALL_CORE:
                     errors.append(
                         {
-                            "message": f"[{name}] Tabular core resource is missing 'schema' (required)",
+                            "message": f"[{name}] Core tabular resource is missing 'schema'",
                             "path": ["resources"],
                         }
                     )
                 else:
-                    # If data exists but no schema => warning; if data missing too => error
-                    if data_exists:
-                        warnings.append(f"[{name}] No Table Schema declared; data not validated")
-                    else:
-                        errors.append(
-                            {
-                                "message": f"[{name}] Resource declared but data path does not exist and no schema was provided",
-                                "path": ["resources"],
-                            }
-                        )
+                    warnings.append(f"[{name}] No Table Schema declared; additional tabular resource not validated")
 
         def validate_json_entity_resource(res, label_fallback=None):
             """
-            Validate a JSON entity resource if it declares jsonSchema; enforce jsonSchema/path for core resources.
+            Validate a JSON entity resource.
+
+            Core JSON resources use canonical schemas bundled in the validator image.
+            Additional JSON resources may use dataset-declared jsonSchema.
             Supports path to file or directory (directory => validate each *.json).
             """
             if not res:
@@ -512,22 +629,43 @@ def validate_crossrefs(datapackage_path: str):
             data_path = resolve_local_path(base_path, path_rel)
             data_exists = os.path.exists(data_path)
 
-            if schema_rel:
-                # jsonSchema declared => data MUST exist
-                if not data_exists:
+            if not data_exists:
+                errors.append(
+                    {
+                        "message": f"[{name}] Data path does not exist: {data_path}",
+                        "path": ["resources"],
+                    }
+                )
+                return None
+
+            # ---- Core JSON resources: ignore dataset jsonSchema, force canonical schema
+            if name in CANONICAL_CORE_JSON_SCHEMAS:
+                schema_path = str(CANONICAL_CORE_JSON_SCHEMAS[name])
+
+                if not os.path.exists(schema_path):
                     errors.append(
                         {
-                            "message": f"[{name}] Declares 'jsonSchema' but data path does not exist: {data_path}",
+                            "message": f"[{name}] Canonical JSON Schema missing inside validator image: {schema_path}",
                             "path": ["resources"],
                         }
                     )
                     return None
 
-                # Resolve schema path (support remote; local relative => resolve)
+            else:
+                # ---- Additional JSON resources: use dataset-declared schema
+                if not schema_rel:
+                    if name in ALL_CORE:
+                        errors.append(
+                            {
+                                "message": f"[{name}] Core JSON resource is missing 'jsonSchema'",
+                                "path": ["resources"],
+                            }
+                        )
+                    else:
+                        warnings.append(f"[{name}] No JSON Schema declared; additional JSON resource not validated")
+                    return None
+
                 if schema_rel.startswith(("http://", "https://", "file://")):
-                    schema_path = schema_rel
-                    # If you want to allow remote jsonSchema fetch, you'd need a fetcher here.
-                    # For now, treat remote schemas as unsupported by this local validator.
                     errors.append(
                         {
                             "message": f"[{name}] Remote jsonSchema is not supported by this validator: {schema_rel}",
@@ -535,8 +673,8 @@ def validate_crossrefs(datapackage_path: str):
                         }
                     )
                     return None
-                else:
-                    schema_path = resolve_local_path(base_path, schema_rel)
+
+                schema_path = resolve_local_path(base_path, schema_rel)
 
                 if not os.path.exists(schema_path):
                     errors.append(
@@ -547,33 +685,86 @@ def validate_crossrefs(datapackage_path: str):
                     )
                     return None
 
-                data = load_json_resource_from_path(data_path)
-                errors_local = validate_against_json_schema(data, schema_path, label_fallback or name)
-                errors.extend(errors_local)
-                return data
+            data = load_json_resource_from_path(data_path)
+            errors_local = validate_against_json_schema(data, schema_path, label_fallback or name)
+            errors.extend(errors_local)
+            return data
 
-            else:
-                # no jsonSchema declared
-                if name in CORE_REQUIRED:
+        def validate_core_tabular_bundle():
+            """
+            Validate core tabular resources that need package context
+            (e.g. foreign keys from participant_characteristics -> participants).
+            """
+            bundle_resources = []
+
+            for res_name in ["participants", "participant_characteristics"]:
+                res = get_resource_safe(package, res_name)
+                if not res:
+                    continue
+
+                desc = res.to_descriptor()
+                path_rel = desc.get("path")
+
+                if not path_rel:
                     errors.append(
                         {
-                            "message": f"[{name}] JSON core resource is missing 'jsonSchema' (required)",
+                            "message": f"[{res_name}] Missing 'path' in resource descriptor",
                             "path": ["resources"],
                         }
                     )
-                    return None
+                    continue
 
-                # Additional resource behavior:
-                if data_exists:
-                    warnings.append(f"[{name}] No JSON Schema declared; data not validated")
-                else:
+                data_path = resolve_local_path(base_path, path_rel)
+                if not os.path.exists(data_path):
                     errors.append(
                         {
-                            "message": f"[{name}] Resource declared but data path does not exist and no jsonSchema was provided",
+                            "message": f"[{res_name}] Data path does not exist: {data_path}",
                             "path": ["resources"],
                         }
                     )
-                return None
+                    continue
+
+                schema_path = CANONICAL_CORE_TABULAR_SCHEMAS.get(res_name)
+                if not schema_path or not os.path.exists(schema_path):
+                    errors.append(
+                        {
+                            "message": f"[{res_name}] Canonical Table Schema missing inside validator image: {schema_path}",
+                            "path": ["resources"],
+                        }
+                    )
+                    continue
+
+                desc_override = dict(desc)
+                desc_override["path"] = path_rel
+
+                with open(schema_path, "r", encoding="utf-8") as sf:
+                    desc_override["schema"] = json.load(sf)
+
+                bundle_resources.append(desc_override)
+
+            if not bundle_resources:
+                return
+
+            try:
+                bundle_pkg = Package({"resources": bundle_resources}, basepath=base_path)
+                bundle_report = bundle_pkg.validate()
+
+                for task in bundle_report.to_dict().get("tasks", []):
+                    task_name = task.get("name") or "tabular"
+                    for err in task.get("errors", []):
+                        errors.append(
+                            {
+                                "message": f"[{task_name}] {err['message']}",
+                                "path": err.get("fieldName", "<row>"),
+                            }
+                        )
+            except Exception as e:
+                errors.append(
+                    {
+                        "message": f"[tabular bundle] Failed validating core tabular resources together: {e}",
+                        "path": ["resources"],
+                    }
+                )
 
         # Validate each resource according to what it is + what it declares
         participants_table = None
@@ -590,10 +781,14 @@ def validate_crossrefs(datapackage_path: str):
 
                 if is_tabular:
                     validate_tabular_resource(res)
+
                 else:
-                    # JSON-like resource: validate if jsonSchema declared
-                    # (core resources enforced inside validate_json_entity_resource)
-                    validate_json_entity_resource(res, res.name)
+                    # Only validate non-core JSON resources here
+                    if res.name not in CANONICAL_CORE_JSON_SCHEMAS:
+                        validate_json_entity_resource(res, res.name)
+
+            # Validate core tabular resources that require package context
+            validate_core_tabular_bundle()
 
             # Load some objects for cross-resource checks if available
             if participants_res:
