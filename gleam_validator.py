@@ -3,10 +3,13 @@ import petl
 import json
 import os
 import sys
+import csv
 from pathlib import Path
 from referencing import Registry, Resource as RefResource
 from jsonschema.validators import validator_for
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse, unquote
+from collections import Counter
 
 
 # ----------------------------
@@ -209,9 +212,38 @@ def validate_against_json_schema(data, schema_path, resource_label):
     base_uri = f"file://{schema_dir}/"
 
     def load_ref(uri):
-        rel = uri.replace(base_uri, "")
-        with open(os.path.join(schema_dir, rel), encoding="utf-8") as ref_file:
-            return RefResource.from_contents(json.load(ref_file))
+        """
+        Resolve refs strictly from local schema_dir.
+        Remote fetching is intentionally disabled.
+        """
+        parsed = urlparse(uri)
+        candidate_paths = []
+
+        # file:// refs generated from local base URI
+        if uri.startswith(base_uri):
+            rel = uri.replace(base_uri, "", 1)
+            candidate_paths.append(os.path.join(schema_dir, rel))
+
+        # Relative refs like "contributor.schema.json"
+        if parsed.scheme == "":
+            candidate_paths.append(os.path.join(schema_dir, uri))
+
+        # Absolute URL refs (e.g. from $id) are mapped to local schema_dir by path tail
+        # so schemas remain self-contained and do not require network access.
+        if parsed.scheme in {"http", "https", "file"}:
+            path_tail = unquote(parsed.path.lstrip("/"))
+            if path_tail:
+                candidate_paths.append(os.path.join(schema_dir, path_tail))
+                candidate_paths.append(os.path.join(schema_dir, os.path.basename(path_tail)))
+
+        for candidate in candidate_paths:
+            if os.path.exists(candidate):
+                with open(candidate, encoding="utf-8") as ref_file:
+                    return RefResource.from_contents(json.load(ref_file))
+
+        raise FileNotFoundError(
+            f"Unresolvable local ref '{uri}' from schema directory '{schema_dir}'"
+        )
 
     registry = Registry(retrieve=load_ref)
     validator_cls = validator_for(schema)
@@ -396,27 +428,658 @@ def validate_sensor_datasheet_ids(devices, known_datasheet_ids):
                 )
     return errors
 
+
+def validate_primary_variables_subset(dataset_rows, warnings=None):
+    """
+    Ensure every dataset_file.primary_variables entry is a subset of the
+    corresponding dataset_file_variables[*].dataset_file_variables_name values.
+    """
+    errors = []
+    rows = dataset_rows if isinstance(dataset_rows, list) else [dataset_rows]
+
+    for i, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            continue
+
+        dataset_id, _ = extract_nested_value_with_trace(row, ["dataset_internal_id"])
+        dataset_label = dataset_id or f"row {i}"
+        dataset_files = row.get("dataset_file", []) or []
+
+        if not isinstance(dataset_files, list):
+            errors.append(
+                {
+                    "message": f"[dataset {dataset_label}] dataset_file must be an array",
+                    "path": ["dataset_file"],
+                }
+            )
+            continue
+
+        for j, file_obj in enumerate(dataset_files):
+            if not isinstance(file_obj, dict):
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_label} file {j+1}] dataset_file entry must be an object",
+                        "path": ["dataset_file", j],
+                    }
+                )
+                continue
+
+            primary_variables = file_obj.get("primary_variables", [])
+            file_variables = file_obj.get("dataset_file_variables", [])
+            is_auxiliary = file_obj.get("dataset_file_auxiliary")
+
+            if primary_variables is None:
+                primary_variables = []
+
+            if not isinstance(primary_variables, list):
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_label} file {j+1}] primary_variables must be an array",
+                        "path": ["dataset_file", j, "primary_variables"],
+                    }
+                )
+                continue
+
+            if not isinstance(file_variables, list):
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_label} file {j+1}] dataset_file_variables must be an array",
+                        "path": ["dataset_file", j, "dataset_file_variables"],
+                    }
+                )
+                continue
+
+            if is_auxiliary is False and len(primary_variables) == 0:
+                errors.append(
+                    {
+                        "message": (
+                            f"[dataset {dataset_label} file {j+1}] primary_variables is required and must be non-empty "
+                            "when dataset_file_auxiliary is false"
+                        ),
+                        "path": ["dataset_file", j, "primary_variables"],
+                    }
+                )
+                continue
+
+            if is_auxiliary is True and "primary_variables" in file_obj and len(primary_variables) > 0:
+                errors.append(
+                    {
+                        "message": (
+                            f"[dataset {dataset_label} file {j+1}] primary_variables must be absent for auxiliary files "
+                            "(dataset_file_auxiliary is true)"
+                        ),
+                        "path": ["dataset_file", j, "primary_variables"],
+                    }
+                )
+                continue
+
+            valid_variable_names = {
+                var.get("dataset_file_variables_name")
+                for var in file_variables
+                if isinstance(var, dict) and var.get("dataset_file_variables_name")
+            }
+
+            for k, primary_var in enumerate(primary_variables):
+                if not isinstance(primary_var, str):
+                    errors.append(
+                        {
+                            "message": f"[dataset {dataset_label} file {j+1}] primary_variables entries must be strings",
+                            "path": ["dataset_file", j, "primary_variables", k],
+                        }
+                    )
+                    continue
+                if primary_var not in valid_variable_names:
+                    errors.append(
+                        {
+                            "message": (
+                                f"[dataset {dataset_label} file {j+1}] "
+                                f"primary_variables entry '{primary_var}' is not present in "
+                                "dataset_file_variables.dataset_file_variables_name"
+                            ),
+                            "path": ["dataset_file", j, "primary_variables", k],
+                        }
+                    )
+
+    return errors
+
+
+# ----------------------------
+# File-content validation (Phase 3)
+# ----------------------------
+def get_column_check_mode():
+    mode = (os.getenv("VALIDATOR_COLUMN_MODE") or "lenient").strip().lower()
+    if mode not in {"lenient", "strict"}:
+        mode = "lenient"
+    return mode
+
+
+def to_strptime_format(fmt: str):
+    if not isinstance(fmt, str):
+        return None
+    py_fmt = fmt.strip()
+    replacements = [
+        ("YYYY", "%Y"),
+        ("MM", "%m"),
+        ("DD", "%d"),
+        ("HH", "%H"),
+        ("hh", "%H"),
+        ("mm", "%M"),
+        ("ss", "%S"),
+    ]
+    for src, dst in replacements:
+        py_fmt = py_fmt.replace(src, dst)
+    return py_fmt
+
+
+def detect_delimiter(header_line: str):
+    candidates = [",", ";", "\t", "|"]
+    counts = {c: header_line.count(c) for c in candidates}
+    best = max(counts, key=counts.get)
+    return best if counts[best] > 0 else ","
+
+
+def detect_delimiter_from_lines(lines):
+    candidates = [",", ";", "\t", "|"]
+    totals = {c: 0 for c in candidates}
+    for line in lines:
+        if not isinstance(line, str):
+            continue
+        for c in candidates:
+            totals[c] += line.count(c)
+    best = max(totals, key=totals.get)
+    return best if totals[best] > 0 else ","
+
+
+def normalize_header_name(value: str):
+    if not isinstance(value, str):
+        return ""
+    return "".join(ch for ch in value.upper() if ch.isalnum())
+
+
+def choose_header_row(tabular_rows, declared_headers, max_scan_rows=60):
+    """
+    Return the 0-based row index that best matches declared headers.
+    Falls back to the first non-empty row when no declared headers are provided.
+    """
+    if not tabular_rows:
+        return None
+
+    normalized_declared = {
+        normalize_header_name(h) for h in (declared_headers or []) if isinstance(h, str) and h.strip()
+    }
+
+    best_idx = None
+    best_score = -1
+    upper = min(len(tabular_rows), max_scan_rows)
+    for idx in range(upper):
+        row = tabular_rows[idx]
+        if not row:
+            continue
+        row_norm = [normalize_header_name(str(c).strip()) for c in row if str(c).strip()]
+        if not row_norm:
+            continue
+        unique_cells = set(row_norm)
+        if len(unique_cells) < 2:
+            continue
+
+        if normalized_declared:
+            overlap = len(unique_cells & normalized_declared)
+            score = overlap
+        else:
+            score = len(unique_cells)
+
+        if score > best_score:
+            best_score = score
+            best_idx = idx
+
+    if best_idx is not None:
+        return best_idx
+
+    for idx, row in enumerate(tabular_rows):
+        if any(str(c).strip() for c in row):
+            return idx
+    return 0
+
+
+def read_tabular_file(
+    file_path: str,
+    format_hint: str,
+    encoding_hint: str,
+    delimiter_hint: str = None,
+    max_rows: int = 5000,
+    header_row_hint: int = None,
+    declared_headers=None,
+):
+    """
+    Read tabular-like file and return (headers, rows_of_dicts, read_error_message_or_None).
+    """
+    fmt = (format_hint or "").strip().lower()
+    encoding = encoding_hint or "utf-8"
+
+    try:
+        if fmt == "json" or file_path.lower().endswith(".json"):
+            with open(file_path, "r", encoding=encoding) as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                data = [data]
+            if not isinstance(data, list):
+                return [], [], "JSON file must contain an object or an array of objects"
+            rows = [r for r in data if isinstance(r, dict)]
+            headers = []
+            seen = set()
+            for row in rows:
+                for k in row.keys():
+                    if k not in seen:
+                        headers.append(k)
+                        seen.add(k)
+            return headers, rows[:max_rows], None
+
+        with open(file_path, "r", encoding=encoding, newline="") as f:
+            raw_text_lines = f.readlines()
+            if not raw_text_lines:
+                return [], [], "File is empty"
+            if delimiter_hint:
+                delim = delimiter_hint
+            elif isinstance(header_row_hint, int) and 1 <= header_row_hint <= len(raw_text_lines):
+                delim = detect_delimiter(raw_text_lines[header_row_hint - 1])
+            else:
+                delim = detect_delimiter_from_lines(raw_text_lines[:60])
+            raw_rows = list(csv.reader(raw_text_lines, delimiter=delim))
+
+            if not raw_rows:
+                return [], [], "File is empty"
+
+            if isinstance(header_row_hint, int):
+                if header_row_hint < 1 or header_row_hint > len(raw_rows):
+                    return [], [], (
+                        f"dataset_file_header_row={header_row_hint} is out of range "
+                        f"(file has {len(raw_rows)} rows)"
+                    )
+                header_idx = header_row_hint - 1
+            else:
+                header_idx = choose_header_row(raw_rows, declared_headers)
+                if header_idx is None:
+                    return [], [], "Could not detect a header row"
+
+            headers = [str(c).strip() for c in raw_rows[header_idx]]
+            data_rows = raw_rows[header_idx + 1:]
+            rows = []
+            for i, row in enumerate(data_rows):
+                if i >= max_rows:
+                    break
+                values = list(row)
+                if len(values) < len(headers):
+                    values.extend([""] * (len(headers) - len(values)))
+                if len(values) > len(headers):
+                    values = values[: len(headers)]
+                rows.append(dict(zip(headers, values)))
+            return headers, rows, None
+    except Exception as e:
+        return [], [], str(e)
+
+
+def parse_timestamps_from_rows(rows, dataset_datetime):
+    """
+    Parse timestamps using dataset_datetime metadata.
+    Returns: (timestamps, parse_errors, checked_count, config_errors)
+    """
+    timestamps = []
+    parse_errors = 0
+    checked = 0
+    config_errors = []
+
+    if not isinstance(dataset_datetime, dict):
+        config_errors.append("dataset_datetime must be an object")
+        return timestamps, parse_errors, checked, config_errors
+
+    date_col = dataset_datetime.get("dataset_datetime_date")
+    date_fmt_raw = dataset_datetime.get("dataset_datetime_dateformat")
+    time_col = dataset_datetime.get("dataset_datetime_time")
+    time_fmt_raw = dataset_datetime.get("dataset_datetime_timeformat")
+
+    if not isinstance(date_col, str) or not date_col:
+        config_errors.append("dataset_datetime_date must be a non-empty string")
+        return timestamps, parse_errors, checked, config_errors
+    if not isinstance(date_fmt_raw, str) or not date_fmt_raw:
+        config_errors.append("dataset_datetime_dateformat must be a non-empty string")
+        return timestamps, parse_errors, checked, config_errors
+
+    date_fmt = to_strptime_format(date_fmt_raw)
+    time_fmt = to_strptime_format(time_fmt_raw) if isinstance(time_fmt_raw, str) else None
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        date_val = row.get(date_col)
+        if date_val is None or str(date_val).strip() == "":
+            continue
+        date_val = str(date_val).strip()
+
+        try:
+            if time_col:
+                time_val = row.get(time_col)
+                if time_val is None or str(time_val).strip() == "":
+                    continue
+                time_val = str(time_val).strip()
+                if not time_fmt:
+                    parse_errors += 1
+                    checked += 1
+                    continue
+                d = datetime.strptime(date_val, date_fmt)
+                t = datetime.strptime(time_val, time_fmt)
+                ts = datetime.combine(d.date(), t.time())
+            else:
+                ts = datetime.strptime(date_val, date_fmt)
+            timestamps.append(ts)
+        except Exception:
+            parse_errors += 1
+        finally:
+            checked += 1
+
+    return timestamps, parse_errors, checked, config_errors
+
+
+def regularity_ratio(timestamps):
+    """
+    Compute dominant interval ratio for sorted timestamps.
+    """
+    if len(timestamps) < 3:
+        return None
+    ordered = sorted(timestamps)
+    deltas = []
+    for a, b in zip(ordered, ordered[1:]):
+        delta = (b - a).total_seconds()
+        if delta > 0:
+            deltas.append(round(delta))
+    if not deltas:
+        return None
+    cnt = Counter(deltas)
+    return max(cnt.values()) / len(deltas)
+
+
+def collect_candidate_data_dirs(package: Package, base_path: str):
+    dirs = {base_path, os.path.join(base_path, "data")}
+    for res in package.resources:
+        desc = res.to_descriptor()
+        p = desc.get("path")
+        candidates = p if isinstance(p, list) else [p]
+        for rel in candidates:
+            if not isinstance(rel, str):
+                continue
+            full = resolve_local_path(base_path, rel)
+            if os.path.isdir(full):
+                dirs.add(full)
+            else:
+                dirs.add(os.path.dirname(full))
+    return [d for d in dirs if d]
+
+
+def resolve_dataset_file_path(base_path: str, file_name: str, candidate_dirs):
+    if not isinstance(file_name, str) or not file_name.strip():
+        return None
+    file_name = file_name.strip()
+
+    # absolute
+    if os.path.isabs(file_name) and os.path.exists(file_name):
+        return file_name
+
+    # relative to base path first
+    direct = resolve_local_path(base_path, file_name)
+    if os.path.exists(direct):
+        return direct
+
+    for d in candidate_dirs:
+        p = os.path.join(d, file_name)
+        if os.path.exists(p):
+            return p
+
+    return None
+
+
+def validate_dataset_file_content(dataset_rows, package: Package, base_path: str, column_mode: str, warnings):
+    errors = []
+    rows = dataset_rows if isinstance(dataset_rows, list) else [dataset_rows]
+    candidate_dirs = collect_candidate_data_dirs(package, base_path)
+
+    for i, ds in enumerate(rows, start=1):
+        if not isinstance(ds, dict):
+            continue
+
+        dataset_id = ds.get("dataset_internal_id") or f"row {i}"
+        ds_datetime = ds.get("dataset_datetime", {})
+        dataset_files = ds.get("dataset_file", []) or []
+
+        if not isinstance(dataset_files, list):
+            errors.append(
+                {
+                    "message": f"[dataset {dataset_id}] dataset_file must be an array",
+                    "path": ["dataset_file"],
+                }
+            )
+            continue
+
+        for j, file_obj in enumerate(dataset_files):
+            if not isinstance(file_obj, dict):
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_id} file {j+1}] dataset_file entry must be an object",
+                        "path": ["dataset_file", j],
+                    }
+                )
+                continue
+
+            file_names = file_obj.get("dataset_file_names", []) or []
+            if not isinstance(file_names, list):
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_id} file {j+1}] dataset_file_names must be an array",
+                        "path": ["dataset_file", j, "dataset_file_names"],
+                    }
+                )
+                continue
+
+            declared_vars = file_obj.get("dataset_file_variables", []) or []
+            if not isinstance(declared_vars, list):
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_id} file {j+1}] dataset_file_variables must be an array",
+                        "path": ["dataset_file", j, "dataset_file_variables"],
+                    }
+                )
+                continue
+
+            declared_col_names = []
+            for k, v in enumerate(declared_vars):
+                if not isinstance(v, dict):
+                    errors.append(
+                        {
+                            "message": f"[dataset {dataset_id} file {j+1}] dataset_file_variables entry must be an object",
+                            "path": ["dataset_file", j, "dataset_file_variables", k],
+                        }
+                    )
+                    continue
+                col_name = v.get("dataset_file_variables_name")
+                if isinstance(col_name, str) and col_name:
+                    declared_col_names.append(col_name)
+                term_obj = v.get("dataset_file_variables_term")
+                if not isinstance(term_obj, dict) or not term_obj.get("variable_term"):
+                    errors.append(
+                        {
+                            "message": (
+                                f"[dataset {dataset_id} file {j+1}] Missing or invalid dataset_file_variables_term "
+                                f"for declared variable '{col_name}'"
+                            ),
+                            "path": ["dataset_file", j, "dataset_file_variables", k, "dataset_file_variables_term"],
+                        }
+                    )
+
+            file_format = file_obj.get("dataset_file_format", "")
+            encoding_list = file_obj.get("dataset_file_encoding", []) or []
+            encoding_hint = encoding_list[0] if isinstance(encoding_list, list) and encoding_list else "utf-8"
+            is_aux = file_obj.get("dataset_file_auxiliary")
+            header_row_hint = file_obj.get("dataset_file_header_row")
+
+            for f_idx, file_name in enumerate(file_names):
+                resolved = resolve_dataset_file_path(base_path, file_name, candidate_dirs)
+                label = f"[dataset {dataset_id} file {j+1}]"
+
+                if not resolved:
+                    errors.append(
+                        {
+                            "message": f"{label} Referenced file does not exist: '{file_name}'",
+                            "path": ["dataset_file", j, "dataset_file_names", f_idx],
+                        }
+                    )
+                    continue
+
+                headers, data_rows, read_error = read_tabular_file(
+                    resolved,
+                    format_hint=file_format,
+                    encoding_hint=encoding_hint,
+                    header_row_hint=header_row_hint if isinstance(header_row_hint, int) else None,
+                    declared_headers=declared_col_names,
+                )
+                if read_error:
+                    errors.append(
+                        {
+                            "message": f"{label} Failed reading file '{file_name}': {read_error}",
+                            "path": ["dataset_file", j, "dataset_file_names", f_idx],
+                        }
+                    )
+                    continue
+
+                # Column checks
+                missing_declared = [c for c in declared_col_names if c not in headers]
+                if missing_declared:
+                    errors.append(
+                        {
+                            "message": (
+                                f"{label} File '{file_name}' is missing declared columns: {missing_declared}"
+                            ),
+                            "path": ["dataset_file", j, "dataset_file_variables"],
+                        }
+                    )
+
+                if column_mode == "strict":
+                    extras = [c for c in headers if c not in declared_col_names]
+                    if extras:
+                        errors.append(
+                            {
+                                "message": (
+                                    f"{label} File '{file_name}' has undeclared extra columns in strict mode: {extras}"
+                                ),
+                                "path": ["dataset_file", j, "dataset_file_variables"],
+                            }
+                        )
+
+                # Datetime metadata checks
+                dt_meta = ds_datetime if isinstance(ds_datetime, dict) else {}
+                date_col = dt_meta.get("dataset_datetime_date")
+                time_col = dt_meta.get("dataset_datetime_time")
+                if isinstance(date_col, str) and date_col and date_col not in headers:
+                    errors.append(
+                        {
+                            "message": f"{label} File '{file_name}' missing datetime/date column '{date_col}'",
+                            "path": ["dataset_datetime", "dataset_datetime_date"],
+                        }
+                    )
+                if isinstance(time_col, str) and time_col and time_col not in headers:
+                    errors.append(
+                        {
+                            "message": f"{label} File '{file_name}' missing time column '{time_col}'",
+                            "path": ["dataset_datetime", "dataset_datetime_time"],
+                        }
+                    )
+
+                timestamps, parse_errors, checked_count, config_errors = parse_timestamps_from_rows(data_rows, dt_meta)
+                for ce in config_errors:
+                    errors.append(
+                        {
+                            "message": f"{label} Datetime metadata config issue: {ce}",
+                            "path": ["dataset_datetime"],
+                        }
+                    )
+                if checked_count > 0 and parse_errors > 0:
+                    errors.append(
+                        {
+                            "message": (
+                                f"{label} File '{file_name}' has {parse_errors}/{checked_count} "
+                                "datetime values that do not match declared format"
+                            ),
+                            "path": ["dataset_datetime"],
+                        }
+                    )
+
+                # Wearable vs auxiliary lightweight consistency
+                reg = regularity_ratio(timestamps)
+                if is_aux is False:
+                    if len(data_rows) < 2:
+                        warnings.append(
+                            {
+                                "message": f"{label} Wearable file '{file_name}' has very few rows",
+                                "path": ["dataset_file", j, "dataset_file_names", f_idx],
+                            }
+                        )
+                    if reg is not None and reg < 0.6:
+                        warnings.append(
+                            {
+                                "message": (
+                                    f"{label} Wearable file '{file_name}' appears irregular in sampling "
+                                    f"(dominant interval ratio={reg:.2f})"
+                                ),
+                                "path": ["dataset_file", j],
+                            }
+                        )
+                elif is_aux is True:
+                    if reg is not None and reg >= 0.9 and len(timestamps) >= 20:
+                        warnings.append(
+                            {
+                                "message": (
+                                    f"{label} Auxiliary file '{file_name}' appears highly regular time-series; "
+                                    "confirm dataset_file_auxiliary is correct"
+                                ),
+                                "path": ["dataset_file", j, "dataset_file_auxiliary"],
+                            }
+                        )
+
+    return errors
+
 # ----------------------------
 # Canonical core schemas bundled in the validator image
 # ----------------------------
 VALIDATOR_ROOT = Path(__file__).parent.resolve()
 CANONICAL_SCHEMAS_DIR = VALIDATOR_ROOT / "schemas"
 
-CANONICAL_PROFILE_PATH = CANONICAL_SCHEMAS_DIR / "gleam-dp-profile.json"
+CORE_JSON_RESOURCES = {"study", "datasets", "devices", "device_datasheets"}
+CORE_TABULAR_RESOURCES = {"participants", "participant_characteristics"}
 
-# Core JSON resources must always validate against these bundled schemas
-CANONICAL_CORE_JSON_SCHEMAS = {
-    "study": CANONICAL_SCHEMAS_DIR / "study.schema.json",
-    "datasets": CANONICAL_SCHEMAS_DIR / "dataset.schema.json",
-    "devices": CANONICAL_SCHEMAS_DIR / "device.schema.json",
-    "device_datasheets": CANONICAL_SCHEMAS_DIR / "device_datasheet.schema.json",
-}
 
-# Core tabular resources must always validate against these bundled schemas
-CANONICAL_CORE_TABULAR_SCHEMAS = {
-    "participants": CANONICAL_SCHEMAS_DIR / "participants.schema.json",
-    "participant_characteristics": CANONICAL_SCHEMAS_DIR / "participant_characteristics.schema.json",
-}
+def get_versioned_schema_dir(schema_version: str) -> Path:
+    return CANONICAL_SCHEMAS_DIR / schema_version
+
+
+def get_core_json_schema_path(resource_name: str, schema_version: str) -> Path:
+    schema_dir = get_versioned_schema_dir(schema_version)
+    mapping = {
+        "study": schema_dir / "study.schema.json",
+        "datasets": schema_dir / "dataset.schema.json",
+        "devices": schema_dir / "device.schema.json",
+        "device_datasheets": schema_dir / "device_datasheet.schema.json",
+    }
+    return mapping[resource_name]
+
+
+def get_core_tabular_schema_path(resource_name: str, schema_version: str) -> Path:
+    schema_dir = get_versioned_schema_dir(schema_version)
+    mapping = {
+        "participants": schema_dir / "participants.schema.json",
+        "participant_characteristics": schema_dir / "participant_characteristics.schema.json",
+    }
+    return mapping[resource_name]
+
+
+def get_profile_path(schema_version: str) -> Path:
+    return get_versioned_schema_dir(schema_version) / "gleam-dp-profile.json"
 
 # ----------------------------
 # Main
@@ -441,12 +1104,15 @@ def validate_crossrefs(datapackage_path: str):
         "datapackage": datapackage_path,
         "core_schema_source": "container",
         "profile_source": "container",
+        "column_check_mode": get_column_check_mode(),
         "warnings": [],
         "errors": []
     }
     # ---- Load package (error if datapackage missing or invalid)
     package = None
     raw_dp_descriptor = None
+    schema_version = None
+    has_valid_schema_bundle = False
 
     try:
         if not os.path.exists(datapackage_path):
@@ -468,20 +1134,51 @@ def validate_crossrefs(datapackage_path: str):
 
         dp_descriptor = raw_dp_descriptor or package.to_descriptor()
         declared_profile = dp_descriptor.get("profile")
+        schema_version = dp_descriptor.get("schema_version")
+        report["schema_version"] = schema_version
 
-        if declared_profile and declared_profile != "data-package":
-            warnings.append(
-                f"[profile] Dataset declares profile '{declared_profile}', "
-                "but canonical validator profile is enforced"
-            )
-        # ---- Profile validation using canonical bundled profile
-        profile_path = str(CANONICAL_PROFILE_PATH)
-        if os.path.exists(profile_path):
-            errors += validate_profile(datapackage_path, profile_path)
-        else:
+        if not schema_version:
             errors.append(
                 {
-                    "message": f"[profile] Canonical profile missing inside validator image: {profile_path}",
+                    "message": "[datapackage] Missing required field: schema_version",
+                    "path": ["schema_version"],
+                }
+            )
+        else:
+            versioned_schema_dir = get_versioned_schema_dir(schema_version)
+            if not versioned_schema_dir.exists():
+                errors.append(
+                    {
+                        "message": f"[datapackage] Schema version folder does not exist: {versioned_schema_dir}",
+                        "path": ["schema_version"],
+                    }
+                )
+            else:
+                has_valid_schema_bundle = True
+
+        allowed_profiles = {"data-package"}
+        if schema_version:
+            allowed_profiles.add(f"schemas/{schema_version}/gleam-dp-profile.json")
+            allowed_profiles.add("gleam-dp-profile.json")
+
+        if declared_profile and declared_profile not in allowed_profiles:
+            warnings.append(
+                {
+                    "message": (
+                        f"[profile] Dataset declares profile '{declared_profile}', "
+                        "but canonical validator profile is enforced"
+                    ),
+                    "path": ["profile"],
+                }
+            )
+        # ---- Profile validation using canonical bundled profile
+        profile_path = str(get_profile_path(schema_version)) if has_valid_schema_bundle else None
+        if profile_path and os.path.exists(profile_path):
+            errors += validate_profile(datapackage_path, profile_path)
+        elif has_valid_schema_bundle:
+            errors.append(
+                {
+                    "message": f"[profile] Canonical profile missing inside validator image: {profile_path or '<unknown>'}",
                     "path": ["<root>"],
                 }
             )
@@ -536,13 +1233,22 @@ def validate_crossrefs(datapackage_path: str):
                 return
 
             # ---- Core tabular resources: ignore dataset schema, force canonical schema
-            if name in CANONICAL_CORE_TABULAR_SCHEMAS:
+            if name in CORE_TABULAR_RESOURCES:
+                if not has_valid_schema_bundle:
+                    errors.append(
+                        {
+                            "message": f"[{name}] Cannot resolve canonical schema without a valid datapackage schema_version",
+                            "path": ["schema_version"],
+                        }
+                    )
+                    return
+
                 # participant_characteristics has a foreign key to participants, so we validate
                 # that pair together later in a package context.
                 if name in {"participants", "participant_characteristics"}:
                     return
                 
-                forced_schema_path = str(CANONICAL_CORE_TABULAR_SCHEMAS[name])
+                forced_schema_path = str(get_core_tabular_schema_path(name, schema_version))
 
                 if not os.path.exists(forced_schema_path):
                     errors.append(
@@ -604,7 +1310,12 @@ def validate_crossrefs(datapackage_path: str):
                         }
                     )
                 else:
-                    warnings.append(f"[{name}] No Table Schema declared; additional tabular resource not validated")
+                    warnings.append(
+                        {
+                            "message": f"[{name}] No Table Schema declared; additional tabular resource not validated",
+                            "path": ["resources", name],
+                        }
+                    )
 
         def validate_json_entity_resource(res, label_fallback=None):
             """
@@ -639,8 +1350,17 @@ def validate_crossrefs(datapackage_path: str):
                 return None
 
             # ---- Core JSON resources: ignore dataset jsonSchema, force canonical schema
-            if name in CANONICAL_CORE_JSON_SCHEMAS:
-                schema_path = str(CANONICAL_CORE_JSON_SCHEMAS[name])
+            if name in CORE_JSON_RESOURCES:
+                if not has_valid_schema_bundle:
+                    errors.append(
+                        {
+                            "message": f"[{name}] Cannot resolve canonical schema without a valid datapackage schema_version",
+                            "path": ["schema_version"],
+                        }
+                    )
+                    return None
+
+                schema_path = str(get_core_json_schema_path(name, schema_version))
 
                 if not os.path.exists(schema_path):
                     errors.append(
@@ -662,7 +1382,12 @@ def validate_crossrefs(datapackage_path: str):
                             }
                         )
                     else:
-                        warnings.append(f"[{name}] No JSON Schema declared; additional JSON resource not validated")
+                        warnings.append(
+                            {
+                                "message": f"[{name}] No JSON Schema declared; additional JSON resource not validated",
+                                "path": ["resources", name],
+                            }
+                        )
                     return None
 
                 if schema_rel.startswith(("http://", "https://", "file://")):
@@ -698,6 +1423,15 @@ def validate_crossrefs(datapackage_path: str):
             bundle_resources = []
 
             for res_name in ["participants", "participant_characteristics"]:
+                if not has_valid_schema_bundle:
+                    errors.append(
+                        {
+                            "message": "[tabular bundle] Cannot resolve canonical schemas without a valid datapackage schema_version",
+                            "path": ["schema_version"],
+                        }
+                    )
+                    return
+
                 res = get_resource_safe(package, res_name)
                 if not res:
                     continue
@@ -724,8 +1458,8 @@ def validate_crossrefs(datapackage_path: str):
                     )
                     continue
 
-                schema_path = CANONICAL_CORE_TABULAR_SCHEMAS.get(res_name)
-                if not schema_path or not os.path.exists(schema_path):
+                schema_path = get_core_tabular_schema_path(res_name, schema_version)
+                if not os.path.exists(schema_path):
                     errors.append(
                         {
                             "message": f"[{res_name}] Canonical Table Schema missing inside validator image: {schema_path}",
@@ -784,7 +1518,7 @@ def validate_crossrefs(datapackage_path: str):
 
                 else:
                     # Only validate non-core JSON resources here
-                    if res.name not in CANONICAL_CORE_JSON_SCHEMAS:
+                    if res.name not in CORE_JSON_RESOURCES:
                         validate_json_entity_resource(res, res.name)
 
             # Validate core tabular resources that require package context
@@ -838,6 +1572,21 @@ def validate_crossrefs(datapackage_path: str):
             errors += validate_device_datasheet_ids(devices_data, datasheet_ids)
             errors += validate_sensor_datasheet_ids(devices_data, datasheet_ids)
 
+        if datasets_data is not None:
+            errors += validate_primary_variables_subset(datasets_data, warnings)
+
+        # ----------------------------
+        # Phase 3: File-content validation (run only after metadata passes)
+        # ----------------------------
+        if not errors and datasets_data is not None:
+            errors += validate_dataset_file_content(
+                dataset_rows=datasets_data,
+                package=package,
+                base_path=base_path,
+                column_mode=report["column_check_mode"],
+                warnings=warnings,
+            )
+
     if package is None and not errors:
         errors.append({"message": "[datapackage] Package not loaded", "path": ["<root>"]})
 
@@ -881,7 +1630,10 @@ def validate_crossrefs(datapackage_path: str):
     if warnings:
         print("Warnings:")
         for w in warnings:
-            print(f" - {w}")
+            if isinstance(w, dict):
+                print(f" - {w['message']} (at path: {w.get('path', ['<root>'])})")
+            else:
+                print(f" - {w}")
 
     if errors:
         print("Validation errors:")

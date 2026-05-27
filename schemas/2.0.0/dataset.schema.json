@@ -115,6 +115,11 @@
             "type": "boolean",
             "description": "Indicator whether the data files contain light data (or auxiliary data)"
           },
+          "dataset_file_header_row": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional 1-based row index of the true header row in the file; use when preamble lines exist"
+          },
           "dataset_file_preprocessing": {
             "type": "object",
             "description": "Preprocessing information",
@@ -169,20 +174,52 @@
                 "dataset_file_variables_calibration": {
                   "type": "string",
                   "description": "Description of transformation that should be applied to the variable for calibration, based only on researchers' calibration"
+                },
+                "dataset_file_variables_term": {
+                  "type": "object",
+                  "description": "Semantic term metadata for this variable",
+                  "additionalProperties": false,
+                  "properties": {
+                    "variable_term": {
+                      "type": "string",
+                      "description": "Controlled semantic term for this variable"
+                    },
+                    "variable_name": {
+                      "type": "string",
+                      "description": "Custom variable name required when variable_term is 'other'"
+                    }
+                  },
+                  "required": ["variable_term"],
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": { "variable_term": { "const": "other" } },
+                        "required": ["variable_term"]
+                      },
+                      "then": {
+                        "required": ["variable_name"],
+                        "properties": {
+                          "variable_name": { "minLength": 1 }
+                        }
+                      }
+                    }
+                  ]
                 }
               },
               "required": [
                 "dataset_file_variables_name",
                 "dataset_file_variables_labels",
-                "dataset_file_variables_units"
+                "dataset_file_variables_units",
+                "dataset_file_variables_term"
               ]
             }
           },
           "primary_variables": {
             "type": "array",
-            "description": "Subset of dataset_file_variables highlighting the main variables of interest in this dataset file. Values should match dataset_file_variables_name entries.",
+            "description": "Primary variables of interest for this file. Must be a subset of dataset_file_variables_name.",
             "items": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "minItems": 1,
             "maxItems": 4,
@@ -197,6 +234,31 @@
           "dataset_file_auxiliary",
           "dataset_file_preprocessing",
           "dataset_file_variables"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": { "dataset_file_auxiliary": { "const": false } },
+              "required": ["dataset_file_auxiliary"]
+            },
+            "then": {
+              "required": ["primary_variables"],
+              "properties": {
+                "primary_variables": { "minItems": 1 }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": { "dataset_file_auxiliary": { "const": true } },
+              "required": ["dataset_file_auxiliary"]
+            },
+            "then": {
+              "not": {
+                "required": ["primary_variables"]
+              }
+            }
+          }
         ]
       }
     }

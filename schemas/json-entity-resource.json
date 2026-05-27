@@ -1,6 +1,7 @@
 {
   "$id": "urn:gleam:profile:resource:json-entity:1",
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "2.0.0",
   "title": "JSON Entity Resource",
   "description": "Extends Frictionless data-resource to allow a JSON Schema pointer for non-tabular JSON.",
   "type": "object",
