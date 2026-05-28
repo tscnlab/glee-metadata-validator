@@ -10,6 +10,7 @@ from jsonschema.validators import validator_for
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse, unquote
 from collections import Counter
+from difflib import get_close_matches
 
 
 # ----------------------------
@@ -303,6 +304,9 @@ def validate_dataset_participant_ids(dataset_rows, participant_table):
     for i, row in enumerate(dataset_rows, start=1):
         pid, failed_path = extract_nested_value_with_trace(row, ["dataset_crossref", "dataset_crossref_participant_id"])
         dataset_id, _ = extract_nested_value_with_trace(row, ["dataset_internal_id"])
+        # For non-participant datasets (e.g., calibration), null participant ID is allowed.
+        if pid is None:
+            continue
         if pid not in valid_ids:
             errors.append(
                 {
@@ -539,6 +543,100 @@ def validate_primary_variables_subset(dataset_rows, warnings=None):
                             "path": ["dataset_file", j, "primary_variables", k],
                         }
                     )
+
+    return errors
+
+
+def validate_dataset_variable_terms(dataset_rows):
+    """
+    Validate that variable_term values are members of dataset_variable_terms
+    (plus reserved fallback term 'other').
+    """
+    errors = []
+    rows = dataset_rows if isinstance(dataset_rows, list) else [dataset_rows]
+
+    for i, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            continue
+
+        dataset_id = row.get("dataset_internal_id") or f"row {i}"
+        vocab_rows = row.get("dataset_variable_terms", [])
+        dataset_files = row.get("dataset_file", []) or []
+
+        if not isinstance(vocab_rows, list):
+            errors.append(
+                {
+                    "message": f"[dataset {dataset_id}] dataset_variable_terms must be an array",
+                    "path": ["dataset_variable_terms"],
+                }
+            )
+            continue
+
+        vocab_terms = set()
+        for j, entry in enumerate(vocab_rows):
+            if not isinstance(entry, dict):
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_id}] dataset_variable_terms entry must be an object",
+                        "path": ["dataset_variable_terms", j],
+                    }
+                )
+                continue
+            term = entry.get("term")
+            if not isinstance(term, str) or not term.strip():
+                errors.append(
+                    {
+                        "message": f"[dataset {dataset_id}] dataset_variable_terms.term must be a non-empty string",
+                        "path": ["dataset_variable_terms", j, "term"],
+                    }
+                )
+                continue
+            vocab_terms.add(term.strip())
+
+        allowed_terms = set(vocab_terms)
+        allowed_terms.add("other")
+
+        if not isinstance(dataset_files, list):
+            errors.append(
+                {
+                    "message": f"[dataset {dataset_id}] dataset_file must be an array",
+                    "path": ["dataset_file"],
+                }
+            )
+            continue
+
+        for j, file_obj in enumerate(dataset_files):
+            if not isinstance(file_obj, dict):
+                continue
+            variables = file_obj.get("dataset_file_variables", []) or []
+            if not isinstance(variables, list):
+                continue
+            for k, var_obj in enumerate(variables):
+                if not isinstance(var_obj, dict):
+                    continue
+                term_obj = var_obj.get("dataset_file_variables_term")
+                if not isinstance(term_obj, dict):
+                    continue
+                var_term = term_obj.get("variable_term")
+                if not isinstance(var_term, str) or not var_term.strip():
+                    continue
+                var_term = var_term.strip()
+                if var_term in allowed_terms:
+                    continue
+
+                suggestion = get_close_matches(var_term, sorted(allowed_terms), n=1, cutoff=0.75)
+                maybe = f" Did you mean '{suggestion[0]}'?" if suggestion else ""
+                errors.append(
+                    {
+                        "message": (
+                            f"[dataset {dataset_id} file {j+1} variable {k+1}] "
+                            f"Unknown variable_term '{var_term}'. "
+                            "It must be declared in dataset_variable_terms (or be 'other')."
+                            f"{maybe}"
+                        ),
+                        "path": ["dataset_file", j, "dataset_file_variables", k, "dataset_file_variables_term", "variable_term"],
+                    }
+                )
 
     return errors
 
@@ -1573,6 +1671,7 @@ def validate_crossrefs(datapackage_path: str):
             errors += validate_sensor_datasheet_ids(devices_data, datasheet_ids)
 
         if datasets_data is not None:
+            errors += validate_dataset_variable_terms(datasets_data)
             errors += validate_primary_variables_subset(datasets_data, warnings)
 
         # ----------------------------

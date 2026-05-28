@@ -12,7 +12,11 @@
     },
     {
       "type": "object",
-      "required": ["resources", "profile", "schema_version"],
+      "required": [
+        "resources",
+        "profile",
+        "schema_version"
+      ],
       "properties": {
         "schema_version": {
           "type": "string",
@@ -22,25 +26,35 @@
         "profile": {
           "type": "string",
           "anyOf": [
-            { "const": "data-package" },
-            { "pattern": "^schemas/2\\.0\\.0/gleam-dp-profile\\.json$" },
-            { "pattern": "^gleam-dp-profile\\.json$" },
-            { "pattern": "^(https?|file)://.*/gleam-dp-profile\\.json$" }
+            {
+              "const": "data-package"
+            },
+            {
+              "pattern": "^schemas/2\\.0\\.0/gleam-dp-profile\\.json$"
+            },
+            {
+              "pattern": "^gleam-dp-profile\\.json$"
+            },
+            {
+              "pattern": "^(https?|file)://.*/gleam-dp-profile\\.json$"
+            }
           ],
           "description": "Path/URL to the package profile, or the canonical 'data-package' alias."
         },
-
         "resources": {
           "type": "array",
           "minItems": 5,
           "description": "Resources in the data package. Certain core resources are required by this profile; additional resources may be included with any name.",
           "items": {
             "anyOf": [
-
               {
                 "title": "Core resource (canonical name)",
                 "type": "object",
-                "required": ["name", "path", "profile"],
+                "required": [
+                  "name",
+                  "path",
+                  "profile"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -61,29 +75,73 @@
                   "profile": {
                     "type": "string",
                     "anyOf": [
-                      { "const": "tabular-data-resource" },
-                      { "pattern": "^(.*/)?json-entity-resource\\.json$" },
-                      { "pattern": "^(https?|file)://.*/json-entity-resource\\.json$" }
+                      {
+                        "const": "tabular-data-resource"
+                      },
+                      {
+                        "pattern": "^(.*/)?json-entity-resource\\.json$"
+                      },
+                      {
+                        "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                      }
                     ]
                   },
-                  "format": { "type": "string" },
-                  "mediatype": { "type": "string" },
+                  "format": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mediatype": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "schema": {
-                    "type": ["string", "object"],
-                    "description": "Table Schema — for tabular resources only."
+                    "type": [
+                      "string",
+                      "object",
+                      "null"
+                    ],
+                    "description": "Table Schema \u2014 for tabular resources only."
                   },
                   "jsonSchema": {
-                    "type": "string",
-                    "description": "JSON Schema — for non-tabular resources only."
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "JSON Schema \u2014 for non-tabular resources only."
                   }
                 },
                 "allOf": [
                   {
-                    "if": { "properties": { "profile": { "const": "tabular-data-resource" } } },
-                    "then": {
-                      "required": ["schema", "mediatype"],
+                    "if": {
                       "properties": {
-                        "mediatype": { "enum": ["text/csv", "application/json"] }
+                        "profile": {
+                          "anyOf": [
+                            {
+                              "const": "tabular-data-resource"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "schema",
+                        "mediatype"
+                      ],
+                      "properties": {
+                        "mediatype": {
+                          "enum": [
+                            "text/csv",
+                            "application/json"
+                          ]
+                        }
                       }
                     }
                   },
@@ -92,44 +150,88 @@
                       "properties": {
                         "profile": {
                           "anyOf": [
-                            { "pattern": "json-entity-resource\\.json$" },
-                            { "pattern": "^(https?|file)://.*/json-entity-resource\\.json$" }
+                            {
+                              "pattern": "json-entity-resource\\.json$"
+                            },
+                            {
+                              "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                            },
+                            {
+                              "type": "null"
+                            }
                           ]
                         }
                       }
                     },
                     "then": {
-                      "required": ["jsonSchema", "mediatype"],
+                      "required": [
+                        "jsonSchema",
+                        "mediatype"
+                      ],
                       "properties": {
-                        "mediatype": { "const": "application/json" }
+                        "mediatype": {
+                          "const": "application/json"
+                        }
                       }
                     }
                   }
                 ]
               },
-
               {
                 "title": "Additional resource (any name allowed)",
                 "type": "object",
-                "required": ["name", "path", "profile"],
+                "required": [
+                  "name",
+                  "path",
+                  "profile"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
                     "description": "Name of an additional, non-core resource."
                   },
-                  "path": { "type": "string" },
+                  "path": {
+                    "type": "string"
+                  },
                   "profile": {
                     "type": "string",
                     "anyOf": [
-                      { "const": "tabular-data-resource" },
-                      { "pattern": "^(.*/)?json-entity-resource\\.json$" },
-                      { "pattern": "^(https?|file)://.*/json-entity-resource\\.json$" }
+                      {
+                        "const": "tabular-data-resource"
+                      },
+                      {
+                        "pattern": "^(.*/)?json-entity-resource\\.json$"
+                      },
+                      {
+                        "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                      }
                     ]
                   },
-                  "format": { "type": "string" },
-                  "mediatype": { "type": "string" },
-                  "schema": { "type": ["string", "object"] },
-                  "jsonSchema": { "type": "string" }
+                  "format": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mediatype": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "schema": {
+                    "type": [
+                      "string",
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "jsonSchema": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
                 },
                 "allOf": [
                   {
@@ -146,15 +248,38 @@
                           ]
                         }
                       },
-                      "required": ["name"]
+                      "required": [
+                        "name"
+                      ]
                     }
                   },
                   {
-                    "if": { "properties": { "profile": { "const": "tabular-data-resource" } } },
-                    "then": {
-                      "required": ["schema", "mediatype"],
+                    "if": {
                       "properties": {
-                        "mediatype": { "enum": ["text/csv", "application/json"] }
+                        "profile": {
+                          "anyOf": [
+                            {
+                              "const": "tabular-data-resource"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "schema",
+                        "mediatype"
+                      ],
+                      "properties": {
+                        "mediatype": {
+                          "enum": [
+                            "text/csv",
+                            "application/json"
+                          ]
+                        }
                       }
                     }
                   },
@@ -163,16 +288,28 @@
                       "properties": {
                         "profile": {
                           "anyOf": [
-                            { "pattern": "json-entity-resource\\.json$" },
-                            { "pattern": "^(https?|file)://.*/json-entity-resource\\.json$" }
+                            {
+                              "pattern": "json-entity-resource\\.json$"
+                            },
+                            {
+                              "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                            },
+                            {
+                              "type": "null"
+                            }
                           ]
                         }
                       }
                     },
                     "then": {
-                      "required": ["jsonSchema", "mediatype"],
+                      "required": [
+                        "jsonSchema",
+                        "mediatype"
+                      ],
                       "properties": {
-                        "mediatype": { "const": "application/json" }
+                        "mediatype": {
+                          "const": "application/json"
+                        }
                       }
                     }
                   }
@@ -180,13 +317,87 @@
               }
             ]
           },
-
           "allOf": [
-            { "contains": { "properties": { "name": { "const": "study" } } } },
-            { "contains": { "properties": { "name": { "const": "participants" } } } },
-            { "contains": { "properties": { "name": { "const": "datasets" } } } },
-            { "contains": { "properties": { "name": { "const": "devices" } } } },
-            { "contains": { "properties": { "name": { "const": "device_datasheets" } } } }
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "study"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "participants"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "datasets"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "devices"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "device_datasheets"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
           ]
         }
       }

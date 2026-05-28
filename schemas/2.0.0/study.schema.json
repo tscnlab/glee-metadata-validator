@@ -18,15 +18,24 @@
       "description": "Study-level metadata"
     },
     "study_preregistration": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "DOI (Digital Object Identifier) of pre-registration document describing data collection"
     },
     "study_ethics": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Name of ethics committee and approval number"
     },
     "study_registration": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Registry and ID of clinical trial registration"
     },
     "study_short_description": {
@@ -38,7 +47,10 @@
       "description": "Short description of the study sample"
     },
     "study_groups": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Groups in the study",
       "items": {
         "type": "object",
@@ -48,33 +60,50 @@
             "description": "Group name"
           },
           "study_group_description": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Group description"
           },
           "study_group_size": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "description": "Sample size"
           },
           "study_group_inclusion": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "description": "Inclusion criteria for sample group, given as an array of strings",
             "items": {
               "type": "string"
             }
           },
           "study_group_exclusion": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "description": "Exclusion criteria for sample group, given as an array of strings",
             "items": {
               "type": "string"
             }
           }
         },
-        "required": ["study_group_name"]
+        "required": [
+          "study_group_name"
+        ]
       }
     },
     "study_intervention": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Short description of the study intervention, if any"
     },
     "study_setting": {
@@ -86,7 +115,10 @@
       "description": "Geographical location and context (city/rural, urban)"
     },
     "study_contributors": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Any contributors to the study",
       "items": {
         "$ref": "contributor.schema.json"
@@ -100,11 +132,17 @@
       }
     },
     "study_type": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Type of study (not explicitly described, placeholder)"
     },
     "study_funding_sources": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Any funding sources supporting the project. If the funding number is available, it should be given",
       "items": {
         "type": "string"
@@ -112,7 +150,10 @@
       "minItems": 1
     },
     "study_keywords": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Key words describing the projects",
       "items": {
         "type": "string"

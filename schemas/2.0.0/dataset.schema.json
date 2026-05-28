@@ -23,9 +23,25 @@
       "description": "Crossreferencing information linking to study, participant, and device",
       "additionalProperties": false,
       "properties": {
-        "dataset_crossref_study_id": { "type": "string", "description": "Internal ID for study" },
-        "dataset_crossref_participant_id": { "type": "string", "description": "Internal ID for participant" },
-        "dataset_crossref_device_id": { "type": "string", "description": "Internal ID for device" }
+        "dataset_crossref_study_id": {
+          "type": "string",
+          "description": "Internal ID for study"
+        },
+        "dataset_crossref_participant_id": {
+          "description": "Internal ID for participant. Null is allowed for non-participant datasets (e.g., calibration).",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_crossref_device_id": {
+          "type": "string",
+          "description": "Internal ID for device"
+        }
       },
       "required": [
         "dataset_crossref_study_id",
@@ -56,19 +72,36 @@
           "description": "Formatting of the date column (e.g., 'YYYY/MM/DD') or datetime column (e.g., 'YYYY/MM/DD HH:MM:SS')"
         },
         "dataset_datetime_time": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Name of the time column (only if separate from date)"
         },
         "dataset_datetime_timeformat": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Formatting of the time column (e.g., 'HH:MM:SS') (only if separate from date)"
         }
       },
-      "required": ["dataset_datetime_date", "dataset_datetime_dateformat"],
+      "required": [
+        "dataset_datetime_date",
+        "dataset_datetime_dateformat"
+      ],
       "allOf": [
         {
-          "if": { "required": ["dataset_datetime_time"] },
-          "then": { "required": ["dataset_datetime_timeformat"] }
+          "if": {
+            "required": [
+              "dataset_datetime_time"
+            ]
+          },
+          "then": {
+            "required": [
+              "dataset_datetime_timeformat"
+            ]
+          }
         }
       ]
     },
@@ -79,9 +112,38 @@
     "dataset_location": {
       "type": "array",
       "description": "Latitude/Longitude of data collection",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 2,
       "maxItems": 2
+    },
+    "dataset_variable_terms": {
+      "type": "array",
+      "description": "Dataset-specific controlled vocabulary for variable_term values. Include 'other' as fallback.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "term": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Short controlled token (e.g., melEDI)"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "description": "Human-readable label for the controlled term"
+          }
+        },
+        "required": [
+          "term"
+        ]
+      }
     },
     "dataset_file": {
       "type": "array",
@@ -94,7 +156,9 @@
           "dataset_file_names": {
             "type": "array",
             "description": "File names corresponding",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "minItems": 1
           },
           "dataset_file_format": {
@@ -104,7 +168,9 @@
           "dataset_file_encoding": {
             "type": "array",
             "description": "File text encoding (e.g., UTF-8)",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "minItems": 1
           },
           "dataset_file_timezone": {
@@ -116,7 +182,10 @@
             "description": "Indicator whether the data files contain light data (or auxiliary data)"
           },
           "dataset_file_header_row": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 1,
             "description": "Optional 1-based row index of the true header row in the file; use when preamble lines exist"
           },
@@ -130,22 +199,39 @@
                 "description": "Indicator whether preprocessing was applied"
               },
               "dataset_file_preprocessing_desc": {
-                "type": "array",
+                "type": [
+                  "array",
+                  "null"
+                ],
                 "description": "Description of what preprocessing was applied",
-                "items": { "type": "string" }
+                "items": {
+                  "type": "string"
+                }
               }
             },
-            "required": ["dataset_file_preprocessing_bol"],
+            "required": [
+              "dataset_file_preprocessing_bol"
+            ],
             "allOf": [
               {
                 "if": {
-                  "properties": { "dataset_file_preprocessing_bol": { "const": true } },
-                  "required": ["dataset_file_preprocessing_bol"]
+                  "properties": {
+                    "dataset_file_preprocessing_bol": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "dataset_file_preprocessing_bol"
+                  ]
                 },
                 "then": {
-                  "required": ["dataset_file_preprocessing_desc"],
+                  "required": [
+                    "dataset_file_preprocessing_desc"
+                  ],
                   "properties": {
-                    "dataset_file_preprocessing_desc": { "minItems": 1 }
+                    "dataset_file_preprocessing_desc": {
+                      "minItems": 1
+                    }
                   }
                 }
               }
@@ -172,7 +258,10 @@
                   "description": "Unit"
                 },
                 "dataset_file_variables_calibration": {
-                  "type": "string",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
                   "description": "Description of transformation that should be applied to the variable for calibration, based only on researchers' calibration"
                 },
                 "dataset_file_variables_term": {
@@ -185,21 +274,36 @@
                       "description": "Controlled semantic term for this variable"
                     },
                     "variable_name": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
                       "description": "Custom variable name required when variable_term is 'other'"
                     }
                   },
-                  "required": ["variable_term"],
+                  "required": [
+                    "variable_term"
+                  ],
                   "allOf": [
                     {
                       "if": {
-                        "properties": { "variable_term": { "const": "other" } },
-                        "required": ["variable_term"]
+                        "properties": {
+                          "variable_term": {
+                            "const": "other"
+                          }
+                        },
+                        "required": [
+                          "variable_term"
+                        ]
                       },
                       "then": {
-                        "required": ["variable_name"],
+                        "required": [
+                          "variable_name"
+                        ],
                         "properties": {
-                          "variable_name": { "minLength": 1 }
+                          "variable_name": {
+                            "minLength": 1
+                          }
                         }
                       }
                     }
@@ -215,7 +319,10 @@
             }
           },
           "primary_variables": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "description": "Primary variables of interest for this file. Must be a subset of dataset_file_variables_name.",
             "items": {
               "type": "string",
@@ -238,24 +345,42 @@
         "allOf": [
           {
             "if": {
-              "properties": { "dataset_file_auxiliary": { "const": false } },
-              "required": ["dataset_file_auxiliary"]
+              "properties": {
+                "dataset_file_auxiliary": {
+                  "const": false
+                }
+              },
+              "required": [
+                "dataset_file_auxiliary"
+              ]
             },
             "then": {
-              "required": ["primary_variables"],
+              "required": [
+                "primary_variables"
+              ],
               "properties": {
-                "primary_variables": { "minItems": 1 }
+                "primary_variables": {
+                  "minItems": 1
+                }
               }
             }
           },
           {
             "if": {
-              "properties": { "dataset_file_auxiliary": { "const": true } },
-              "required": ["dataset_file_auxiliary"]
+              "properties": {
+                "dataset_file_auxiliary": {
+                  "const": true
+                }
+              },
+              "required": [
+                "dataset_file_auxiliary"
+              ]
             },
             "then": {
               "not": {
-                "required": ["primary_variables"]
+                "required": [
+                  "primary_variables"
+                ]
               }
             }
           }
@@ -273,6 +398,7 @@
     "dataset_datetime",
     "dataset_timezone",
     "dataset_location",
+    "dataset_variable_terms",
     "dataset_file"
   ]
 }

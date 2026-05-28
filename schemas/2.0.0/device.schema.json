@@ -27,13 +27,23 @@
       "description": "Serial number assigned to the individual device"
     },
     "device_calibration_date": {
-      "type": "string",
-      "format": "date",
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-      "description": "Date of last calibration (format YYYY-MM-DD)"
+      "description": "Date of last calibration (format YYYY-MM-DD), or null when unknown/not available",
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "device_firmware_version": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Firmware version installed on the device"
     },
     "device_datasheet_id": {
@@ -42,9 +52,12 @@
       "description": "Reference to the general device specifications. Datasheet ID (slug). Version suffix optional; e.g., lumitech-lt100-v1.0"
     },
     "device_sensors": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "List of sensors contained within the device",
-      "default":[],
+      "default": [],
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -54,12 +67,17 @@
             "description": "Type of sensor (e.g., photopic light sensor, UV sensor)"
           },
           "device_sensor_datasheet_id": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[a-z0-9][a-z0-9._-]*(-v[0-9]+(\\.[0-9]+)*)?$",
             "description": "Reference to detailed datasheet of the sensor"
           }
         },
-        "required": ["device_sensor_type"]
+        "required": [
+          "device_sensor_type"
+        ]
       }
     }
   },
@@ -72,7 +90,7 @@
     "device_calibration_date",
     "device_datasheet_id"
   ],
-    "examples": [
+  "examples": [
     {
       "device_internal_id": "D001",
       "device_manufacturer": "ExampleCorp",

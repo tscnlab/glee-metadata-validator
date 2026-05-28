@@ -16,9 +16,12 @@
       "description": "foreign key devices reference"
     },
     "datasheet_version": {
-    "type": "string",
-    "description": "Version label for this datasheet, e.g. 1.0"
-    }, 
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Version label for this datasheet, e.g. 1.0"
+    },
     "datasheet_manufacturer": {
       "type": "string",
       "description": "Manufacturer of the sensor/device"
@@ -73,7 +76,10 @@
       "description": "Information about response range"
     },
     "datasheet_channel": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "description": "Information on channels",
       "items": {
         "type": "object",
@@ -89,15 +95,24 @@
             "description": "Name of the channel as appearing in the export (file)"
           },
           "datasheet_channel_unit": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Unit of channel"
           },
           "datasheet_channel_description": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Description of channel"
           }
         },
-        "required": ["datasheet_channel_nr", "datasheet_channel_name"]
+        "required": [
+          "datasheet_channel_nr",
+          "datasheet_channel_name"
+        ]
       }
     }
   },
@@ -112,7 +127,7 @@
     "datasheet_calibration_linearity",
     "datasheet_calibration_directional_response",
     "datasheet_calibration_range"
-  ], 
+  ],
   "examples": [
     {
       "datasheet_id": "lumitech-lt100-v1.0",
@@ -122,16 +137,35 @@
       "datasheet_model": "LT-100",
       "datasheet_calibration_interval": 365,
       "datasheet_calibration_spectral_sensitivity": [
-        { "datasheet_calibration_spectral_sensitivity_wavelength": 450, "datasheet_calibration_spectral_sensitivity_relative": 0.85 },
-        { "datasheet_calibration_spectral_sensitivity_wavelength": 555, "datasheet_calibration_spectral_sensitivity_relative": 1.0 },
-        { "datasheet_calibration_spectral_sensitivity_wavelength": 650, "datasheet_calibration_spectral_sensitivity_relative": 0.42 }
+        {
+          "datasheet_calibration_spectral_sensitivity_wavelength": 450,
+          "datasheet_calibration_spectral_sensitivity_relative": 0.85
+        },
+        {
+          "datasheet_calibration_spectral_sensitivity_wavelength": 555,
+          "datasheet_calibration_spectral_sensitivity_relative": 1.0
+        },
+        {
+          "datasheet_calibration_spectral_sensitivity_wavelength": 650,
+          "datasheet_calibration_spectral_sensitivity_relative": 0.42
+        }
       ],
-      "datasheet_calibration_linearity": "±2% over 0–50,000 lux",
-      "datasheet_calibration_directional_response": "±10% (cosine corrected)",
-      "datasheet_calibration_range": "0–100,000 lux",
+      "datasheet_calibration_linearity": "\u00b12% over 0\u201350,000 lux",
+      "datasheet_calibration_directional_response": "\u00b110% (cosine corrected)",
+      "datasheet_calibration_range": "0\u2013100,000 lux",
       "datasheet_channel": [
-        { "datasheet_channel_nr": 1, "datasheet_channel_name": "broadband", "datasheet_channel_unit": "lux", "datasheet_channel_description": "Broadband visible light" },
-        { "datasheet_channel_nr": 2, "datasheet_channel_name": "blue",      "datasheet_channel_unit": "µW/cm²", "datasheet_channel_description": "Blue band (~470 nm)" }
+        {
+          "datasheet_channel_nr": 1,
+          "datasheet_channel_name": "broadband",
+          "datasheet_channel_unit": "lux",
+          "datasheet_channel_description": "Broadband visible light"
+        },
+        {
+          "datasheet_channel_nr": 2,
+          "datasheet_channel_name": "blue",
+          "datasheet_channel_unit": "\u00b5W/cm\u00b2",
+          "datasheet_channel_description": "Blue band (~470 nm)"
+        }
       ]
     }
   ]
