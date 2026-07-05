@@ -385,6 +385,45 @@ def validate_study_datasets_link(study_data, dataset_ids):
 
     return errors
 
+def validate_study_group_datasets_link(study_data, dataset_ids):
+    """
+    Ensure every entry in study.study_groups[].study_group_datasets exists in datasets[].dataset_internal_id
+    """
+    errors = []
+    studies = study_data if isinstance(study_data, list) else [study_data]
+
+    for i, s in enumerate(studies, start=1):
+        if not isinstance(s, dict):
+            continue
+
+        study_id, _ = extract_nested_value_with_trace(s, ["study_internal_id"])
+        study_groups = s.get("study_groups", []) or []
+        if not isinstance(study_groups, list):
+            continue
+
+        for group_index, group in enumerate(study_groups):
+            if not isinstance(group, dict):
+                continue
+
+            group_name = group.get("study_group_name") or f"group {group_index + 1}"
+            group_datasets = group.get("study_group_datasets", []) or []
+            if not isinstance(group_datasets, list):
+                continue
+
+            for dataset_index, ds_id in enumerate(group_datasets):
+                if ds_id not in dataset_ids:
+                    errors.append(
+                        {
+                            "message": (
+                                f"[study {study_id or f'row {i}'}, study group {group_name}] "
+                                f"Unknown dataset ID in study_group_datasets: '{ds_id}'"
+                            ),
+                            "path": ["study_groups", group_index, "study_group_datasets", dataset_index],
+                        }
+                    )
+
+    return errors
+
 def validate_characteristics_links(characteristics_table, participant_table):
     valid_ids = set(participant_table.cut("participant_internal_id").values("participant_internal_id"))
     errors = []
@@ -1659,6 +1698,7 @@ def validate_crossrefs(datapackage_path: str):
                 if isinstance(d, dict) and extract_nested_value_with_trace(d, ["dataset_internal_id"])[0]
             }
             errors += validate_study_datasets_link(study_data, dataset_ids)
+            errors += validate_study_group_datasets_link(study_data, dataset_ids)
 
         # Optional participant_characteristics cross-ref check
         if characteristics_table is not None and participants_table is not None:

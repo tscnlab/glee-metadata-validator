@@ -15,7 +15,7 @@
     },
     "study_title": {
       "type": "string",
-      "description": "Study-level metadata"
+      "description": "Study name"
     },
     "study_preregistration": {
       "type": [
@@ -92,10 +92,19 @@
             "items": {
               "type": "string"
             }
+          },
+          "study_group_datasets": {
+            "type": "array",
+            "description": "Dataset internal IDs linked to this study group",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
           }
         },
         "required": [
-          "study_group_name"
+          "study_group_name",
+          "study_group_datasets"
         ]
       }
     },
@@ -136,7 +145,7 @@
         "string",
         "null"
       ],
-      "description": "Type of study (not explicitly described, placeholder)"
+      "description": "Type of study"
     },
     "study_funding_sources": {
       "type": [
