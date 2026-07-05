@@ -1,8 +1,6 @@
 # GLC metadata validator
 
-<p align="center">
-  <img src="assets/GLC_Logo.png" alt="Global Light Commons logo" width="260">
-</p>
+<img src="assets/GLC_Logo.png" alt="Global Light Commons logo" width="220">
 
 This repository contains the GLC metadata validator for GLEAM-style Frictionless data packages. It provides the canonical schema bundle and Dockerized validation script used to check that a metadata repository is complete, internally consistent, and compatible with the supported GLC schema versions.
 
