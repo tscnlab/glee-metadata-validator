@@ -1,8 +1,8 @@
-<p align="center">
-  <img src="assets/GLC_Logo.png" alt="Global Light Commons logo" width="520">
-</p>
-
 # GLC metadata validator
+
+<p align="center">
+  <img src="assets/GLC_Logo.png" alt="Global Light Commons logo" width="260">
+</p>
 
 This repository contains the GLC metadata validator for GLEAM-style Frictionless data packages. It provides the canonical schema bundle and Dockerized validation script used to check that a metadata repository is complete, internally consistent, and compatible with the supported GLC schema versions.
 
@@ -13,6 +13,7 @@ This repository contains the GLC metadata validator for GLEAM-style Frictionless
 - `requirements.txt`: pinned Python dependencies used by the validator.
 - `VERSION`: the validator release version.
 - `schemas/1.0.0/` and `schemas/2.0.0/`: versioned GLC schema bundles, including the Frictionless data package profile and JSON/Table Schema files for core resources.
+- `templates/github-actions/validate-glee-dataset.yml`: a ready-to-copy GitHub Actions workflow for running validation from a dataset or metadata repository.
 
 The validator currently checks:
 
@@ -26,9 +27,9 @@ The validator currently checks:
 
 ## Requirements
 
-Users who want to run GLC validation in their own metadata repository need Docker installed and available on the command line. The validator is designed to run as a container against the repository that contains the `datapackage.json` file.
+Users who want to run GLC validation locally need Docker installed and available on the command line. In GitHub Actions, Docker is already available on the hosted Ubuntu runners used by the workflow template.
 
-In other words, you do not need to install Python dependencies into each dataset repository. Add or run the validator container from the metadata repository you want to validate.
+You do not need to install Python dependencies into each dataset repository. Add the GitHub Actions workflow template to the repository you want to validate, or run the validator container locally from that repository.
 
 ## Build a metadata package
 
@@ -73,32 +74,35 @@ docker run --rm \
 
 ## Add validation to a metadata repository
 
-For routine GLC validation, add a small script or CI workflow to the repository that contains your metadata and data files. The important part is that the repository is mounted into the validator container and the validator is pointed at that repository's `datapackage.json`.
+For routine GLC validation, copy the workflow template from this repository into the dataset or metadata repository you want to validate:
 
-Example script:
+```text
+templates/github-actions/validate-glee-dataset.yml
+```
+
+Place it at:
+
+```text
+.github/workflows/validate-glee-dataset.yml
+```
+
+The workflow runs on pushes to `main`, pull requests, and manual dispatch. It runs the published validator image against `datapackage.json`, writes a machine-readable report to `validation_out/validation.json`, uploads `validation_out/` as a GitHub Actions artifact, and publishes the latest validation report to the repository's `gh-pages` branch.
+
+The workflow uses:
+
+```text
+ghcr.io/tscnlab/glee-validator:0.4.0
+```
+
+For local validation without GitHub Actions, run the same container from the repository that contains `datapackage.json`:
 
 ```sh
-#!/usr/bin/env sh
-set -eu
-
 docker run --rm \
   -v "$PWD":/data \
   -w /data \
-  glc-metadata-validator datapackage.json
+  ghcr.io/tscnlab/glee-validator:0.4.0 \
+  datapackage.json
 ```
-
-Example GitHub Actions step:
-
-```yaml
-- name: Run GLC metadata validation
-  run: |
-    docker run --rm \
-      -v "$PWD":/data \
-      -w /data \
-      glc-metadata-validator datapackage.json
-```
-
-If your team publishes this validator image to a registry, replace `glc-metadata-validator` with the published image name, for example `ghcr.io/<org>/glc-metadata-validator:<version>`.
 
 ## Expected package shape
 
