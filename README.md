@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="docs/glc-logo.svg" alt="GLC metadata validator logo" width="360">
+  <img src="assets/GLC_Logo.png" alt="Global Light Commons logo" width="520">
 </p>
 
-# GLC Metadata Validator
+# GLC metadata validator
 
 This repository contains the GLC metadata validator for GLEAM-style Frictionless data packages. It provides the canonical schema bundle and Dockerized validation script used to check that a metadata repository is complete, internally consistent, and compatible with the supported GLC schema versions.
 
-## What Is Included
+## What is included
 
 - `gleam_validator.py`: the Python validator entrypoint.
 - `Dockerfile`: a containerized runtime for running validation consistently in local development and CI.
@@ -30,13 +30,13 @@ Users who want to run GLC validation in their own metadata repository need Docke
 
 In other words, you do not need to install Python dependencies into each dataset repository. Add or run the validator container from the metadata repository you want to validate.
 
-## Build A Metadata Package
+## Build a metadata package
 
 Use the [GLC metadata builder](https://tscnlab.github.io/glc-metadata-builder/) to create a metadata package that follows this schema. The builder helps assemble the required `datapackage.json` and core metadata resources before you run validation.
 
 After exporting or committing the generated metadata package, run this validator from the package repository to check the exported files against the canonical GLC schemas.
 
-## Run Locally
+## Run locally
 
 Build the validator image from this repository:
 
@@ -71,7 +71,7 @@ docker run --rm \
   glc-metadata-validator datapackage.json
 ```
 
-## Add Validation To A Metadata Repository
+## Add validation to a metadata repository
 
 For routine GLC validation, add a small script or CI workflow to the repository that contains your metadata and data files. The important part is that the repository is mounted into the validator container and the validator is pointed at that repository's `datapackage.json`.
 
@@ -100,7 +100,7 @@ Example GitHub Actions step:
 
 If your team publishes this validator image to a registry, replace `glc-metadata-validator` with the published image name, for example `ghcr.io/<org>/glc-metadata-validator:<version>`.
 
-## Expected Package Shape
+## Expected package shape
 
 The metadata repository should include a `datapackage.json` with a supported `schema_version`, currently `1.0.0` or `2.0.0`. The package must declare the required core resources using the canonical resource names:
 
