@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="220" viewBox="0 0 720 220" role="img" aria-labelledby="title desc">
+  <title id="title">GLC logo</title>
+  <desc id="desc">A simple GLC wordmark with a validation check mark.</desc>
+  <rect width="720" height="220" rx="24" fill="#ffffff"/>
+  <circle cx="111" cy="110" r="64" fill="#125a70"/>
+  <path d="M80 112l22 23 43-54" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="200" y="126" fill="#1f2933" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700" letter-spacing="0">GLC</text>
+  <text x="204" y="164" fill="#52606d" font-family="Arial, Helvetica, sans-serif" font-size="24" letter-spacing="0">metadata validator</text>
+</svg>
