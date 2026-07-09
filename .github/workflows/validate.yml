@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      VALIDATOR_IMAGE_TAG: ghcr.io/tscnlab/glee-validator:0.4.2
+      VALIDATOR_IMAGE_TAG: ghcr.io/tscnlab/glee-validator:0.4.3
 
     steps:
       - name: Checkout dataset repository
@@ -76,17 +76,11 @@ jobs:
           path: validation_out/
           retention-days: 30
 
-      - name: Attest validation report
-        if: always() && hashFiles('validation_out/validation.json') != ''
+      - name: Attest validation outputs
+        if: always() && hashFiles('validation_out/*.json') != ''
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: validation_out/validation.json
-
-      - name: Attest file manifest
-        if: always() && hashFiles('validation_out/validated-files-manifest.json') != ''
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: validation_out/validated-files-manifest.json
+          subject-path: validation_out/*.json
 
       - name: Fail workflow if validation failed
         if: always()
