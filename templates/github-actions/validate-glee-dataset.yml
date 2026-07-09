@@ -14,6 +14,6 @@ permissions:
 
 jobs:
   validate:
-    uses: tscnlab/glee-metadata-validator/.github/workflows/validate.yml@v0.4.1
+    uses: tscnlab/glee-metadata-validator/.github/workflows/validate.yml@v0.4.2
     with:
       datapackage: datapackage.json
