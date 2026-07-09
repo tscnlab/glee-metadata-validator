@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import csv
+import hashlib
 from pathlib import Path
 from referencing import Registry, Resource as RefResource
 from jsonschema.validators import validator_for
@@ -77,6 +78,23 @@ def path_exists(base_path: str, path_rel: str) -> bool:
         return False
     p = resolve_local_path(base_path, path_rel)
     return os.path.exists(p)
+
+
+def sha256_file(path_str: str, chunk_size: int = 1024 * 1024) -> str:
+    """Return SHA-256 digest for a file."""
+    h = hashlib.sha256()
+    with open(path_str, "rb") as f:
+        for chunk in iter(lambda: f.read(chunk_size), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def relpath_for_manifest(path_str: str, base_path: str) -> str:
+    """Return a stable, repo-relative path when possible."""
+    try:
+        return os.path.relpath(path_str, base_path)
+    except Exception:
+        return path_str
 
 
 def extract_nested_value_with_trace(data, path):
@@ -973,6 +991,136 @@ def resolve_dataset_file_path(base_path: str, file_name: str, candidate_dirs):
     return None
 
 
+def add_manifest_entry(entries, seen_paths, base_path, path_str, source, required=True):
+    """Add one file/path entry to the validation manifest."""
+    if not path_str:
+        return
+
+    abs_path = path_str if os.path.isabs(path_str) else resolve_local_path(base_path, path_str)
+    abs_path = os.path.abspath(abs_path)
+
+    if abs_path in seen_paths:
+        return
+    seen_paths.add(abs_path)
+
+    rel_path = relpath_for_manifest(abs_path, base_path)
+    entry = {
+        "path": rel_path,
+        "source": source,
+        "required": bool(required),
+        "exists": os.path.exists(abs_path),
+        "is_file": os.path.isfile(abs_path),
+        "sha256": None,
+        "size_bytes": None,
+    }
+
+    if os.path.isfile(abs_path):
+        entry["sha256"] = sha256_file(abs_path)
+        entry["size_bytes"] = os.path.getsize(abs_path)
+
+    entries.append(entry)
+
+
+def add_manifest_path_value(entries, seen_paths, base_path, path_value, source, required=True):
+    """Add a datapackage path value, which may be a string or list of strings."""
+    if isinstance(path_value, str):
+        add_manifest_entry(entries, seen_paths, base_path, path_value, source, required)
+    elif isinstance(path_value, list):
+        for item in path_value:
+            if isinstance(item, str):
+                add_manifest_entry(entries, seen_paths, base_path, item, source, required)
+
+
+def build_file_manifest(
+    datapackage_path: str,
+    package: Package = None,
+    raw_dp_descriptor: dict = None,
+    datasets_data=None,
+):
+    """
+    Build a manifest of files referenced by datapackage.json and datasets metadata.
+
+    This records the exact files seen by the validator at this commit. Missing paths
+    are included without a digest so the manifest is still useful when validation fails.
+    """
+    base_path = os.path.dirname(os.path.abspath(datapackage_path))
+    entries = []
+    seen_paths = set()
+
+    add_manifest_entry(entries, seen_paths, base_path, datapackage_path, "datapackage", True)
+
+    descriptor = raw_dp_descriptor or {}
+    for res in descriptor.get("resources", []) or []:
+        if not isinstance(res, dict):
+            continue
+        name = res.get("name") or "<unnamed>"
+        add_manifest_path_value(
+            entries,
+            seen_paths,
+            base_path,
+            res.get("path"),
+            f"datapackage.resources.{name}.path",
+            True,
+        )
+        add_manifest_path_value(
+            entries,
+            seen_paths,
+            base_path,
+            res.get("schema"),
+            f"datapackage.resources.{name}.schema",
+            False,
+        )
+        add_manifest_path_value(
+            entries,
+            seen_paths,
+            base_path,
+            res.get("jsonSchema"),
+            f"datapackage.resources.{name}.jsonSchema",
+            False,
+        )
+
+    if datasets_data is not None:
+        rows = datasets_data if isinstance(datasets_data, list) else [datasets_data]
+        candidate_dirs = collect_candidate_data_dirs(package, base_path) if package else [base_path]
+
+        for row_index, ds in enumerate(rows, start=1):
+            if not isinstance(ds, dict):
+                continue
+            dataset_id = ds.get("dataset_internal_id") or f"row {row_index}"
+            dataset_files = ds.get("dataset_file", []) or []
+            if not isinstance(dataset_files, list):
+                continue
+
+            for group_index, file_group in enumerate(dataset_files, start=1):
+                if not isinstance(file_group, dict):
+                    continue
+                file_names = file_group.get("dataset_file_names", []) or []
+                if not isinstance(file_names, list):
+                    continue
+                for file_name in file_names:
+                    if not isinstance(file_name, str):
+                        continue
+                    resolved = resolve_dataset_file_path(base_path, file_name, candidate_dirs)
+                    source = f"datasets.{dataset_id}.dataset_file[{group_index}].dataset_file_names"
+                    add_manifest_entry(
+                        entries,
+                        seen_paths,
+                        base_path,
+                        resolved or file_name,
+                        source,
+                        True,
+                    )
+
+    return {
+        "schema_version": "1.0",
+        "repo": os.getenv("GITHUB_REPOSITORY") or None,
+        "commit_sha": os.getenv("GITHUB_SHA") or None,
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "datapackage": datapackage_path,
+        "files": sorted(entries, key=lambda e: e["path"]),
+    }
+
+
 def validate_dataset_file_content(dataset_rows, package: Package, base_path: str, column_mode: str, warnings):
     errors = []
     rows = dataset_rows if isinstance(dataset_rows, list) else [dataset_rows]
@@ -1237,6 +1385,7 @@ def validate_crossrefs(datapackage_path: str):
         "repo": os.getenv("GITHUB_REPOSITORY") or None,
         "commit_sha": os.getenv("GITHUB_SHA") or None,
         "validator_version": get_validator_version(),
+        "validator_image": os.getenv("VALIDATOR_IMAGE") or None,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "datapackage": datapackage_path,
         "core_schema_source": "container",
@@ -1750,6 +1899,23 @@ def validate_crossrefs(datapackage_path: str):
         except Exception:
             pass
 
+    manifest = build_file_manifest(
+        datapackage_path=datapackage_path,
+        package=package,
+        raw_dp_descriptor=raw_dp_descriptor,
+        datasets_data=datasets_data if "datasets_data" in locals() else None,
+    )
+    if not manifest.get("commit_sha"):
+        manifest["commit_sha"] = report.get("commit_sha")
+
+    manifest_files = manifest.get("files", [])
+    report["file_manifest"] = {
+        "path": os.getenv("VALIDATION_MANIFEST") or os.path.join("validation_out", "validated-files-manifest.json"),
+        "file_count": len(manifest_files),
+        "missing_count": len([f for f in manifest_files if not f.get("exists")]),
+        "hashed_count": len([f for f in manifest_files if f.get("sha256")]),
+    }
+
     # Decide status
     if errors:
         report["status"] = "fail"
@@ -1764,6 +1930,13 @@ def validate_crossrefs(datapackage_path: str):
 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
+
+    manifest_path = os.getenv("VALIDATION_MANIFEST") or os.path.join(
+        os.path.dirname(out_path), "validated-files-manifest.json"
+    )
+    os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
 
     # Console output
     if warnings:

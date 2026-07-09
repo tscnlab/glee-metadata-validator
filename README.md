@@ -11,7 +11,8 @@ This repository contains the GLC metadata validator for GLEAM-style Frictionless
 - `requirements.txt`: pinned Python dependencies used by the validator.
 - `VERSION`: the validator release version.
 - `schemas/1.0.0/` and `schemas/2.0.0/`: versioned GLC schema bundles, including the Frictionless data package profile and JSON/Table Schema files for core resources.
-- `templates/github-actions/validate-glee-dataset.yml`: a ready-to-copy GitHub Actions workflow for running validation from a dataset or metadata repository.
+- `.github/workflows/validate.yml`: a reusable trusted validation workflow that runs the validator container, uploads reports, and attests the validation outputs.
+- `templates/github-actions/validate-glee-dataset.yml`: a ready-to-copy caller workflow for dataset repositories.
 
 The validator currently checks:
 
@@ -22,6 +23,7 @@ The validator currently checks:
 - Tabular resources against bundled Table Schemas.
 - Cross-resource links such as participant, study, dataset, device, and datasheet IDs.
 - Dataset file metadata against the referenced data files when metadata validation passes.
+- SHA-256 checksums for files referenced by `datapackage.json` and `datasets.json`.
 
 ## Requirements
 
@@ -60,6 +62,12 @@ A JSON report is written to:
 validation_out/validation.json
 ```
 
+The validator also writes a checksum manifest:
+
+```text
+validation_out/validated-files-manifest.json
+```
+
 To write the report somewhere else, set `VALIDATION_JSON`:
 
 ```sh
@@ -72,7 +80,7 @@ docker run --rm \
 
 ## Add validation to a metadata repository
 
-For routine GLC validation, copy the workflow template from this repository into the dataset or metadata repository you want to validate:
+For routine GLC validation, copy the caller workflow template from this repository into the dataset or metadata repository you want to validate:
 
 ```text
 templates/github-actions/validate-glee-dataset.yml
@@ -84,7 +92,20 @@ Place it at:
 .github/workflows/validate-glee-dataset.yml
 ```
 
-The workflow runs on pushes to `main`, pull requests, and manual dispatch. It runs the published validator image against `datapackage.json`, writes a machine-readable report to `validation_out/validation.json`, uploads `validation_out/` as a GitHub Actions artifact, and publishes the latest validation report to the repository's `gh-pages` branch.
+The workflow runs on pushes to `main`, pull requests, and manual dispatch. It calls the trusted reusable workflow in this repository instead of duplicating validation logic in each dataset repository.
+
+The reusable workflow:
+
+- checks out the dataset repository with Git LFS enabled
+- pulls the published validator image
+- records the resolved validator image digest in `validation.json`
+- writes `validation_out/validation.json`
+- writes `validation_out/validated-files-manifest.json`
+- uploads `validation_out/` as the `validation-report` GitHub Actions artifact
+- attests `validation.json` and `validated-files-manifest.json`
+- publishes a human-readable copy of validation output to the dataset repository's `gh-pages` branch
+
+The `gh-pages` files are useful for dashboards and browsing. Registry automation should verify the attested `validation-report` artifact for the exact dataset commit before treating a dataset as valid.
 
 The workflow uses:
 
@@ -123,7 +144,9 @@ Additional resources may be included. If an additional tabular resource declares
 Environment variables:
 
 - `VALIDATION_JSON`: output path for the JSON validation report. Defaults to `validation_out/validation.json`.
+- `VALIDATION_MANIFEST`: output path for the checksum manifest. Defaults to `validation_out/validated-files-manifest.json`.
 - `VALIDATOR_VERSION`: overrides the version recorded in the validation report. Defaults to the value in `VERSION`.
+- `VALIDATOR_IMAGE`: records the validator image digest or tag in the validation report.
 - `VALIDATOR_COLUMN_MODE`: controls dataset file column checks. Supported values are `lenient` and `strict`; the default is `lenient`.
 
 ## Development

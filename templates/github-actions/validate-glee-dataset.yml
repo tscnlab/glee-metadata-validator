@@ -9,93 +9,11 @@ on:
 permissions:
   contents: write
   packages: read
+  id-token: write
+  attestations: write
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run validator container
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p validation_out
-          set +e
-
-          docker login ghcr.io -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}"
-
-          docker run --rm \
-            -e GITHUB_REPOSITORY="${{ github.repository }}" \
-            -e GITHUB_SHA="${{ github.sha }}" \
-            -e VALIDATION_JSON="/data/validation_out/validation.json" \
-            -v "${{ github.workspace }}:/data" \
-            -w /data \
-            ghcr.io/tscnlab/glee-validator:0.4.0 \
-            datapackage.json \
-            | tee validation_out/validation.log
-
-          exit_code=${PIPESTATUS[0]}
-          echo "$exit_code" > validation_out/exit_code.txt
-          exit 0
-
-      - name: Prepare gh-pages payload (sticky latest_pass)
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          test -f validation_out/validation.json || (echo "Missing validation_out/validation.json" && exit 1)
-
-          rm -rf _prev_ghpages
-          git clone --depth 1 --branch gh-pages "https://github.com/${{ github.repository }}.git" _prev_ghpages || true
-
-          if [ -f "_prev_ghpages/latest_pass.json" ]; then
-            cp _prev_ghpages/latest_pass.json validation_out/latest_pass.json
-            echo "Carried forward latest_pass.json from previous gh-pages"
-          fi
-
-          if [ -d "_prev_ghpages/passes" ]; then
-            mkdir -p validation_out/passes
-            cp -R _prev_ghpages/passes/* validation_out/passes/ || true
-            echo "Carried forward passes/ from previous gh-pages"
-          fi
-
-          STATUS="$(python3 -c "import json; print(json.load(open('validation_out/validation.json'))['status'])")"
-          echo "Validation status: $STATUS"
-
-          if [ "$STATUS" = "pass" ]; then
-            mkdir -p validation_out/passes
-            cp validation_out/validation.json "validation_out/passes/${{ github.sha }}.json"
-            cp validation_out/validation.json "validation_out/latest_pass.json"
-            echo "Updated latest_pass.json and wrote passes/${{ github.sha }}.json"
-          else
-            echo "Not a pass; kept previous latest_pass.json (if any)."
-          fi
-
-      - name: Upload validation artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-report
-          path: validation_out/
-          retention-days: 30
-
-      - name: Publish validation report to gh-pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: validation_out
-
-      - name: Fail workflow if validation failed
-        shell: bash
-        if: always()
-        run: |
-          exit_code=$(cat validation_out/exit_code.txt)
-          if [ "$exit_code" -ne 0 ]; then
-            echo "Validation failed (exit_code=$exit_code)"
-            exit 1
-          fi
+    uses: tscnlab/glee-metadata-validator/.github/workflows/validate.yml@v0.4.0
+    with:
+      datapackage: datapackage.json

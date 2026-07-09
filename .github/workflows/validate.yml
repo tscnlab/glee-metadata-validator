@@ -1,0 +1,148 @@
+name: Reusable GLEE validation
+
+on:
+  workflow_call:
+    inputs:
+      datapackage:
+        description: Path to datapackage.json in the dataset repository.
+        required: false
+        type: string
+        default: datapackage.json
+
+permissions:
+  contents: write
+  packages: read
+  id-token: write
+  attestations: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    env:
+      VALIDATOR_IMAGE_TAG: ghcr.io/tscnlab/glee-validator:0.4.0
+
+    steps:
+      - name: Checkout dataset repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull validator image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$VALIDATOR_IMAGE_TAG"
+          digest_ref="$(docker image inspect "$VALIDATOR_IMAGE_TAG" --format='{{index .RepoDigests 0}}')"
+          echo "VALIDATOR_IMAGE=$digest_ref" >> "$GITHUB_ENV"
+          echo "Validator image: $digest_ref"
+
+      - name: Run validator container
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p validation_out
+          set +e
+
+          docker run --rm \
+            -e GITHUB_REPOSITORY="${{ github.repository }}" \
+            -e GITHUB_SHA="${{ github.sha }}" \
+            -e VALIDATOR_IMAGE="$VALIDATOR_IMAGE" \
+            -e VALIDATION_JSON="/data/validation_out/validation.json" \
+            -e VALIDATION_MANIFEST="/data/validation_out/validated-files-manifest.json" \
+            -v "${{ github.workspace }}:/data" \
+            -w /data \
+            "$VALIDATOR_IMAGE" \
+            "${{ inputs.datapackage }}" \
+            | tee validation_out/validation.log
+
+          exit_code=${PIPESTATUS[0]}
+          echo "$exit_code" > validation_out/exit_code.txt
+          exit 0
+
+      - name: Prepare gh-pages payload
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f validation_out/validation.json || (echo "Missing validation_out/validation.json" && exit 1)
+          test -f validation_out/validated-files-manifest.json || (echo "Missing validation_out/validated-files-manifest.json" && exit 1)
+
+          rm -rf _prev_ghpages
+          git clone --depth 1 --branch gh-pages "https://github.com/${{ github.repository }}.git" _prev_ghpages || true
+
+          if [ -f "_prev_ghpages/latest_pass.json" ]; then
+            cp _prev_ghpages/latest_pass.json validation_out/latest_pass.json
+            echo "Carried forward latest_pass.json from previous gh-pages"
+          fi
+
+          if [ -f "_prev_ghpages/latest_pass_manifest.json" ]; then
+            cp _prev_ghpages/latest_pass_manifest.json validation_out/latest_pass_manifest.json
+            echo "Carried forward latest_pass_manifest.json from previous gh-pages"
+          fi
+
+          if [ -d "_prev_ghpages/passes" ]; then
+            mkdir -p validation_out/passes
+            cp -R _prev_ghpages/passes/* validation_out/passes/ || true
+            echo "Carried forward passes/ from previous gh-pages"
+          fi
+
+          STATUS="$(python3 -c "import json; print(json.load(open('validation_out/validation.json'))['status'])")"
+          echo "Validation status: $STATUS"
+
+          if [ "$STATUS" = "pass" ]; then
+            mkdir -p validation_out/passes
+            cp validation_out/validation.json "validation_out/passes/${{ github.sha }}.json"
+            cp validation_out/validated-files-manifest.json "validation_out/passes/${{ github.sha }}-manifest.json"
+            cp validation_out/validation.json "validation_out/latest_pass.json"
+            cp validation_out/validated-files-manifest.json "validation_out/latest_pass_manifest.json"
+            echo "Updated latest pass files for ${{ github.sha }}"
+          else
+            echo "Not a pass; kept previous latest pass files if present."
+          fi
+
+      - name: Upload validation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation_out/
+          retention-days: 30
+
+      - name: Attest validation report
+        if: always() && hashFiles('validation_out/validation.json') != ''
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: validation_out/validation.json
+
+      - name: Attest file manifest
+        if: always() && hashFiles('validation_out/validated-files-manifest.json') != ''
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: validation_out/validated-files-manifest.json
+
+      - name: Publish validation report to gh-pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: validation_out
+
+      - name: Fail workflow if validation failed
+        if: always()
+        shell: bash
+        run: |
+          exit_code=$(cat validation_out/exit_code.txt)
+          if [ "$exit_code" -ne 0 ]; then
+            echo "Validation failed (exit_code=$exit_code)"
+            exit 1
+          fi
