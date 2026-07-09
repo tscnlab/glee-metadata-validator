@@ -103,9 +103,8 @@ The reusable workflow:
 - writes `validation_out/validated-files-manifest.json`
 - uploads `validation_out/` as the `validation-report` GitHub Actions artifact
 - attests `validation.json` and `validated-files-manifest.json`
-- publishes a human-readable copy of validation output to the dataset repository's `gh-pages` branch
 
-The `gh-pages` files are useful for dashboards and browsing. Registry automation should verify the attested `validation-report` artifact for the exact dataset commit before treating a dataset as valid.
+Registry automation should verify the attested `validation-report` artifact for the exact dataset commit before treating a dataset as valid.
 
 The workflow uses:
 

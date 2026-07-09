@@ -10,7 +10,7 @@ on:
         default: datapackage.json
 
 permissions:
-  contents: write
+  contents: read
   packages: read
   id-token: write
   attestations: write
@@ -68,48 +68,6 @@ jobs:
           echo "$exit_code" > validation_out/exit_code.txt
           exit 0
 
-      - name: Prepare gh-pages payload
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          test -f validation_out/validation.json || (echo "Missing validation_out/validation.json" && exit 1)
-          test -f validation_out/validated-files-manifest.json || (echo "Missing validation_out/validated-files-manifest.json" && exit 1)
-
-          rm -rf _prev_ghpages
-          git clone --depth 1 --branch gh-pages "https://github.com/${{ github.repository }}.git" _prev_ghpages || true
-
-          if [ -f "_prev_ghpages/latest_pass.json" ]; then
-            cp _prev_ghpages/latest_pass.json validation_out/latest_pass.json
-            echo "Carried forward latest_pass.json from previous gh-pages"
-          fi
-
-          if [ -f "_prev_ghpages/latest_pass_manifest.json" ]; then
-            cp _prev_ghpages/latest_pass_manifest.json validation_out/latest_pass_manifest.json
-            echo "Carried forward latest_pass_manifest.json from previous gh-pages"
-          fi
-
-          if [ -d "_prev_ghpages/passes" ]; then
-            mkdir -p validation_out/passes
-            cp -R _prev_ghpages/passes/* validation_out/passes/ || true
-            echo "Carried forward passes/ from previous gh-pages"
-          fi
-
-          STATUS="$(python3 -c "import json; print(json.load(open('validation_out/validation.json'))['status'])")"
-          echo "Validation status: $STATUS"
-
-          if [ "$STATUS" = "pass" ]; then
-            mkdir -p validation_out/passes
-            cp validation_out/validation.json "validation_out/passes/${{ github.sha }}.json"
-            cp validation_out/validated-files-manifest.json "validation_out/passes/${{ github.sha }}-manifest.json"
-            cp validation_out/validation.json "validation_out/latest_pass.json"
-            cp validation_out/validated-files-manifest.json "validation_out/latest_pass_manifest.json"
-            echo "Updated latest pass files for ${{ github.sha }}"
-          else
-            echo "Not a pass; kept previous latest pass files if present."
-          fi
-
       - name: Upload validation artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -129,13 +87,6 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: validation_out/validated-files-manifest.json
-
-      - name: Publish validation report to gh-pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: validation_out
 
       - name: Fail workflow if validation failed
         if: always()
