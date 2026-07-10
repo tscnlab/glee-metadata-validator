@@ -1839,7 +1839,7 @@ def validate_crossrefs(datapackage_path: str):
         if datasets_data is not None and study_data is not None:
             errors += validate_dataset_study_ids(datasets_data, study_data)
         
-        # Study → datasets cross-reference
+        # Study to datasets cross-reference
         if study_data is not None and datasets_data is not None:
             dataset_ids = {
                 extract_nested_value_with_trace(d, ["dataset_internal_id"])[0]
