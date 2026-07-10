@@ -1,4 +1,4 @@
-name: Validate GLEE Dataset
+name: Validate GLC Dataset
 
 on:
   push:
