@@ -1,0 +1,391 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/<your-org-or-username>/<your-repo>/main/schemas/3.0.0/device_datasheet.schema.json",
+  "version": "3.0.0",
+  "title": "Generalized Device/Sensor Datasheet Schema",
+  "description": "Generalized metadata schema for device and sensor datasheets.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of the metadata schema used by this datasheet record"
+    },
+    "datasheet_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*(-v[0-9]+(\\.[0-9]+)*)?$",
+      "description": "Unique datasheet identifier referenced by devices or sensors"
+    },
+    "datasheet_version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Version label for this datasheet, e.g. 1.0"
+    },
+    "datasheet_manufacturer": {
+      "type": "string",
+      "description": "Manufacturer of the device or sensor"
+    },
+    "datasheet_type": {
+      "type": "string",
+      "description": "Human-readable type of the device or sensor"
+    },
+    "datasheet_sensor_modality": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "light",
+          "accelerometer",
+          "temperature",
+          "other"
+        ]
+      },
+      "description": "One or more controlled modalities/categories used to apply modality-specific validation rules"
+    },
+    "datasheet_sensor_modality_other": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Free-text modality description when datasheet_sensor_modality contains other"
+    },
+    "datasheet_model": {
+      "type": "string",
+      "description": "Model of the device or sensor"
+    },
+    "datasheet_calibration_interval": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Recommended or required calibration interval in days, or null when not applicable"
+    },
+    "datasheet_calibration_method": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "General description of the calibration method, if applicable"
+    },
+    "datasheet_calibration_accuracy": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Accuracy, uncertainty, or tolerance information, if applicable"
+    },
+    "datasheet_calibration_range": {
+      "type": "string",
+      "description": "Light-sensor measurement or calibration range. Required when datasheet_sensor_modality is light."
+    },
+    "datasheet_calibration_notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Additional calibration notes"
+    },
+    "datasheet_calibration_parameters": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Generic calibration or sensor specification parameters. This supports non-light sensor metadata without hardcoding modality-specific fields.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "parameter_name": {
+            "type": "string",
+            "description": "Name of the calibration/specification parameter"
+          },
+          "parameter_value": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ],
+            "description": "Value of the parameter"
+          },
+          "parameter_unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Unit of the parameter value, if applicable"
+          },
+          "parameter_description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Additional explanation of the parameter"
+          }
+        },
+        "required": [
+          "parameter_name",
+          "parameter_value"
+        ]
+      }
+    },
+    "datasheet_calibration_spectral_sensitivity": {
+      "type": "array",
+      "description": "Light-sensor spectral sensitivity calibration. Required when datasheet_sensor_modality is light.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "datasheet_calibration_spectral_sensitivity_wavelength": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Wavelength (nm)"
+          },
+          "datasheet_calibration_spectral_sensitivity_relative": {
+            "type": "number",
+            "description": "Relative spectral sensitivity at the given wavelength"
+          }
+        },
+        "required": [
+          "datasheet_calibration_spectral_sensitivity_wavelength",
+          "datasheet_calibration_spectral_sensitivity_relative"
+        ]
+      }
+    },
+    "datasheet_calibration_linearity": {
+      "type": "string",
+      "description": "Linearity calibration information. Required when datasheet_sensor_modality is light."
+    },
+    "datasheet_calibration_directional_response": {
+      "type": "string",
+      "description": "Directional response calibration information. Required when datasheet_sensor_modality is light."
+    },
+    "datasheet_channel": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Information on channels exported by the device or sensor",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "datasheet_channel_nr": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Channel number"
+          },
+          "datasheet_channel_name": {
+            "type": "string",
+            "description": "Channel name as it appears in exported files"
+          },
+          "datasheet_channel_unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Unit of channel"
+          },
+          "datasheet_channel_description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Description of channel"
+          }
+        },
+        "required": [
+          "datasheet_channel_nr",
+          "datasheet_channel_name"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "datasheet_id",
+    "datasheet_manufacturer",
+    "datasheet_type",
+    "datasheet_sensor_modality",
+    "datasheet_model",
+    "datasheet_channel"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "datasheet_sensor_modality": {
+            "contains": {
+              "const": "light"
+            }
+          }
+        },
+        "required": [
+          "datasheet_sensor_modality"
+        ]
+      },
+      "then": {
+        "required": [
+          "datasheet_calibration_spectral_sensitivity",
+          "datasheet_calibration_linearity",
+          "datasheet_calibration_directional_response",
+          "datasheet_calibration_range"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "datasheet_sensor_modality": {
+            "contains": {
+              "const": "other"
+            }
+          }
+        },
+        "required": [
+          "datasheet_sensor_modality"
+        ]
+      },
+      "then": {
+        "properties": {
+          "datasheet_sensor_modality_other": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "datasheet_sensor_modality_other"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "datasheet_sensor_modality": {
+            "not": {
+              "contains": {
+                "const": "light"
+              }
+            }
+          }
+        },
+        "required": [
+          "datasheet_sensor_modality"
+        ]
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "datasheet_calibration_spectral_sensitivity"
+              ]
+            },
+            {
+              "required": [
+                "datasheet_calibration_linearity"
+              ]
+            },
+            {
+              "required": [
+                "datasheet_calibration_directional_response"
+              ]
+            },
+            {
+              "required": [
+                "datasheet_calibration_range"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "schema_version": "3.0.0",
+      "datasheet_id": "lumitech-lt100-v1.0",
+      "datasheet_version": "1.0",
+      "datasheet_manufacturer": "Lumitech",
+      "datasheet_type": "Wearable light sensor",
+      "datasheet_sensor_modality": [
+        "light"
+      ],
+      "datasheet_model": "LT-100",
+      "datasheet_calibration_interval": 365,
+      "datasheet_calibration_spectral_sensitivity": [
+        {
+          "datasheet_calibration_spectral_sensitivity_wavelength": 450,
+          "datasheet_calibration_spectral_sensitivity_relative": 0.85
+        },
+        {
+          "datasheet_calibration_spectral_sensitivity_wavelength": 555,
+          "datasheet_calibration_spectral_sensitivity_relative": 1.0
+        }
+      ],
+      "datasheet_calibration_linearity": "+/-2% over 0-50,000 lux",
+      "datasheet_calibration_directional_response": "+/-10% cosine corrected",
+      "datasheet_calibration_range": "0-100,000 lux",
+      "datasheet_channel": [
+        {
+          "datasheet_channel_nr": 1,
+          "datasheet_channel_name": "photopic",
+          "datasheet_channel_unit": "lux",
+          "datasheet_channel_description": "Photopic illuminance channel"
+        }
+      ]
+    },
+    {
+      "schema_version": "3.0.0",
+      "datasheet_id": "actlumus-accelerometer-v1.0",
+      "datasheet_version": "1.0",
+      "datasheet_manufacturer": "ExampleCorp",
+      "datasheet_type": "Tri-axial accelerometer",
+      "datasheet_sensor_modality": [
+        "accelerometer"
+      ],
+      "datasheet_model": "ACC-100",
+      "datasheet_calibration_interval": null,
+      "datasheet_calibration_parameters": [
+        {
+          "parameter_name": "measurement_range",
+          "parameter_value": "+/-8",
+          "parameter_unit": "g",
+          "parameter_description": "Accelerometer dynamic range"
+        },
+        {
+          "parameter_name": "resolution",
+          "parameter_value": 12,
+          "parameter_unit": "bit",
+          "parameter_description": "ADC resolution"
+        }
+      ],
+      "datasheet_channel": [
+        {
+          "datasheet_channel_nr": 1,
+          "datasheet_channel_name": "x",
+          "datasheet_channel_unit": "g",
+          "datasheet_channel_description": "X-axis acceleration"
+        },
+        {
+          "datasheet_channel_nr": 2,
+          "datasheet_channel_name": "y",
+          "datasheet_channel_unit": "g",
+          "datasheet_channel_description": "Y-axis acceleration"
+        },
+        {
+          "datasheet_channel_nr": 3,
+          "datasheet_channel_name": "z",
+          "datasheet_channel_unit": "g",
+          "datasheet_channel_description": "Z-axis acceleration"
+        }
+      ]
+    }
+  ]
+}

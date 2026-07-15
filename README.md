@@ -10,7 +10,9 @@ This repository contains the GLC metadata validator for GLEAM-style Frictionless
 - `Dockerfile`: a containerized runtime for running validation consistently in local development and CI.
 - `requirements.txt`: pinned Python dependencies used by the validator.
 - `VERSION`: the validator release version.
-- `schemas/1.0.0/` and `schemas/2.0.0/`: versioned GLC schema bundles, including the Frictionless data package profile and JSON/Table Schema files for core resources.
+- `schemas/1.0.0/` and `schemas/2.0.0/`: supported GLC schema bundles, including the Frictionless data package profile and JSON/Table Schema files for core resources.
+- `schemas/3.0.0/`: the unreleased development bundle for the next breaking schema revision. It is not yet supported by the published validator image.
+- `docs/schema-3.0.0-development.md`: the implementation and release checklist for coordinating schema, validator, and builder changes.
 - `.github/workflows/validate.yml`: a reusable trusted validation workflow that runs the validator container, uploads reports, and attests the validation outputs.
 - `templates/github-actions/validate-glee-dataset.yml`: a ready-to-copy caller workflow for dataset repositories.
 
@@ -146,7 +148,6 @@ Environment variables:
 - `VALIDATION_MANIFEST`: output path for the checksum manifest. Defaults to `validation_out/validated-files-manifest.json`.
 - `VALIDATOR_VERSION`: overrides the version recorded in the validation report. Defaults to the value in `VERSION`.
 - `VALIDATOR_IMAGE`: records the validator image digest or tag in the validation report.
-- `VALIDATOR_COLUMN_MODE`: controls dataset file column checks. Supported values are `lenient` and `strict`; the default is `lenient`.
 
 ## Development
 

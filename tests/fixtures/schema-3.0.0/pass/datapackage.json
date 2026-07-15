@@ -1,0 +1,63 @@
+{
+  "profile": "schemas/3.0.0/gleam-dp-profile.json",
+  "schema_version": "3.0.0",
+  "name": "schema-3-fixture",
+  "title": "Schema 3.0.0 validation fixture",
+  "resources": [
+    {
+      "name": "study",
+      "path": "data/study.json",
+      "profile": "json-entity-resource.json",
+      "mediatype": "application/json",
+      "jsonSchema": "schemas/3.0.0/study.schema.json"
+    },
+    {
+      "name": "participants",
+      "path": "data/participants.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "participant_internal_id",
+            "type": "string"
+          },
+          {
+            "name": "participant_age",
+            "type": "integer"
+          },
+          {
+            "name": "participant_sex",
+            "type": "string"
+          },
+          {
+            "name": "participant_gender",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "datasets",
+      "path": "data/datasets.json",
+      "profile": "json-entity-resource.json",
+      "mediatype": "application/json",
+      "jsonSchema": "schemas/3.0.0/dataset.schema.json"
+    },
+    {
+      "name": "devices",
+      "path": "data/devices.json",
+      "profile": "json-entity-resource.json",
+      "mediatype": "application/json",
+      "jsonSchema": "schemas/3.0.0/device.schema.json"
+    },
+    {
+      "name": "device_datasheets",
+      "path": "data/device_datasheets.json",
+      "profile": "json-entity-resource.json",
+      "mediatype": "application/json",
+      "jsonSchema": "schemas/3.0.0/device_datasheet.schema.json"
+    }
+  ]
+}
