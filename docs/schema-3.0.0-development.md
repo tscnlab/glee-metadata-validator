@@ -20,8 +20,7 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Annotate dataset-level and file-group-level timezone fields with the `iana-timezone` format.
 - [x] Move datetime metadata from dataset level into each file group and require an explicit `column` or `collection` source.
 - [x] Move device ID, device location, sampling interval, and collection instructions from dataset level into each file group.
-- [x] Add required file-group device location type with `anatomical`, `environmental`, `geographic`, and `other` values.
-- [x] Require a non-empty file-group location-type description when device location type is `other`.
+- [x] Add required file-group device location type with `body_worn`, `participant_proximal`, and `environmental` values and user-facing definitions.
 - [x] Replace file-group sampling interval with structured temporal resolution supporting `fixed_interval` and `event_based`.
 - [x] Require declared variable types and conditionally require string-coded factor-level dictionaries.
 - [x] Replace `dataset_file_auxiliary` with independent `dataset_file_role` and `dataset_file_data_state` fields.
@@ -38,8 +37,8 @@ Record each agreed schema change here together with its validator, builder, migr
 ## Validator work
 
 - [x] Keep 3.0.0 disabled during development through the explicit supported-version allowlist.
-- [ ] Review every 3.0.0 schema change for validation that cannot be expressed by JSON Schema alone.
-- [ ] Add 3.0.0-specific cross-resource and semantic validation where required.
+- [x] Review every confirmed 3.0.0 schema change for validation that cannot be expressed by JSON Schema alone.
+- [x] Add 3.0.0-specific cross-resource and semantic validation for study, participant, device, primary-variable, timezone, datetime, and data-file relationships.
 - [x] Validate all non-empty declared column values against their declared type and warn on empty values.
 - [x] Warn on undeclared extra columns and remove configurable column modes.
 - [x] Warn when participant IDs declared in the participants resource are not referenced by any dataset.
@@ -53,11 +52,11 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Add timezone tests covering valid names, `UTC`, invalid names, and missing runtime timezone data.
 - [x] Add a complete passing 3.0.0 metadata-package fixture and a failing integration variant.
 - [x] Confirm validation reports identify schema version 3.0.0.
-- [ ] Add `3.0.0` to `SUPPORTED_SCHEMA_VERSIONS` only when the schema and validator behavior are ready for release.
+- [x] Enable `3.0.0` in `SUPPORTED_SCHEMA_VERSIONS` on the unreleased development branch for end-to-end testing.
 
 ## Metadata builder work
 
-- [ ] Change the builder's active schema version and schema paths from 2.0.0 to 3.0.0.
+- [x] Make 3.0.0 the default schema and schema path on the dedicated `schema-3.0.0-testing` builder branch while retaining 2.0.0 as a compatibility option.
 - [x] Export `dataset_location` values as numbers and validate coordinate input for 3.0.0 packages.
 - [x] Update device-datasheet forms for multiple modalities, generalized calibration parameters, and conditional light/other requirements.
 - [x] Restrict dataset and file-group timezone entry to recognized IANA timezone names.
@@ -68,8 +67,8 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Prevent assigning one dataset to multiple study groups and warn when imported metadata contains duplicate assignments.
 - [x] Show one resource-level warning for an untouched builder page and field-level warnings only after the user enters content.
 - [x] Generate version-aware `datapackage.json` resource references and schema ZIP paths.
-- [ ] Validate an exported builder package with the 3.0.0 validator before release.
-- [ ] Update builder documentation and displayed schema version.
+- [x] Import a complete package through the browser builder, export its ZIP, restore the referenced data file, and validate the exact builder output with the 3.0.0 validator.
+- [x] Update the schema 3.0.0 testing builder's displayed schema version and development documentation.
 
 ## Migration and compatibility
 
@@ -82,7 +81,7 @@ Record each agreed schema change here together with its validator, builder, migr
 
 ## Release work
 
-- [ ] Verify the validator and builder 3.0.0 schema directories are identical.
+- [x] Verify the validator and builder 3.0.0 schema directories are identical.
 - [ ] Update validator and builder documentation to list 3.0.0 as supported.
 - [ ] Increment the validator application version.
 - [ ] Build and test the new validator container image.
