@@ -3,20 +3,57 @@
     "schema_version": "3.0.0",
     "study_internal_id": "STUDY001",
     "study_title": "Schema 3.0.0 fixture study",
-    "study_short_description": "A minimal package used for validator integration tests.",
+    "study_preregistration": "https://doi.org/10.0000/example-preregistration",
+    "study_ethics": "Example Research Ethics Committee, approval GLC-2026-001",
+    "study_registration": "Example Registry TEST-001",
+    "study_short_description": "A comprehensive package used for validator integration tests.",
     "study_sample": "One adult participant",
     "study_groups": [
       {
         "study_group_name": "main",
+        "study_group_description": "Adult participant group",
+        "study_group_size": 1,
+        "study_group_inclusion": [
+          "Age 18 years or older"
+        ],
+        "study_group_exclusion": [
+          "Unable to complete the recording protocol"
+        ],
         "study_group_datasets": [
           "DS001"
         ]
       }
     ],
+    "study_intervention": "No intervention",
     "study_setting": "Laboratory",
     "study_geographical_location": "Berlin, Germany",
+    "study_contributors": [
+      {
+        "contributor_full_name": "Alex Example",
+        "contributor_roles": [
+          "data collector",
+          "metadata curator"
+        ],
+        "contributor_email": "alex.example@example.org",
+        "contributor_orcid": "0000-0002-1825-0097",
+        "contributor_institution": {
+          "contributor_institution_name": "Example Research Institute",
+          "contributor_institution_city": "Berlin",
+          "contributor_institution_country": "Germany"
+        }
+      }
+    ],
     "study_datasets": [
       "DS001"
+    ],
+    "study_type": "observational",
+    "study_funding_sources": [
+      "Example Research Fund, grant GLC-001"
+    ],
+    "study_keywords": [
+      "light exposure",
+      "wearable sensor",
+      "circadian health"
     ]
   }
 ]

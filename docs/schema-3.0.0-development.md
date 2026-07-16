@@ -51,6 +51,8 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Validate `dataset_timezone` and every `dataset_file_timezone` against Python's IANA timezone database.
 - [x] Add timezone tests covering valid names, `UTC`, invalid names, and missing runtime timezone data.
 - [x] Add a complete passing 3.0.0 metadata-package fixture and a failing integration variant.
+- [x] Expand the self-contained fixture with study contributors, participant characteristics, complete optional study metadata, bundled schemas, and a preamble-bearing light data file.
+- [x] Add valid and invalid core-resource tests for contributors, participants, participant characteristics, devices, nullable alternatives, and tabular header handling.
 - [x] Confirm validation reports identify schema version 3.0.0.
 - [x] Enable `3.0.0` in `SUPPORTED_SCHEMA_VERSIONS` on the unreleased development branch for end-to-end testing.
 

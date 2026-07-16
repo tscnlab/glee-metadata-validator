@@ -39,6 +39,14 @@
       }
     },
     {
+      "name": "participant_characteristics",
+      "path": "data/participant_characteristics.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": "schemas/3.0.0/participant_characteristics.schema.json"
+    },
+    {
       "name": "datasets",
       "path": "data/datasets.json",
       "profile": "json-entity-resource.json",

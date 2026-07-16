@@ -56,6 +56,12 @@ class Schema3PackageFixtureTests(unittest.TestCase):
         self.assertTrue(
             any(file["path"] == "data/datasets/light.csv" and file["sha256"] for file in manifest["files"])
         )
+        self.assertTrue(
+            any(
+                file["path"] == "data/participant_characteristics.csv" and file["sha256"]
+                for file in manifest["files"]
+            )
+        )
 
     def test_invalid_schema_3_fixture_fails_with_specific_errors(self):
         def make_invalid(package_root):
@@ -82,6 +88,8 @@ class Schema3PackageFixtureTests(unittest.TestCase):
             data_path = os.path.join(package_root, "data", "datasets", "light.csv")
             with open(data_path, "w", encoding="utf-8") as data_file:
                 data_file.write(
+                    "Device export,Lumitech LT-100\n"
+                    "Generated for schema test,2026-07-16\n"
                     "timestamp,illuminance,undeclared\n"
                     "2026-07-14 08:00:00,12.5,x\n"
                     "2026-07-14 08:01:00,13.0,y\n"
@@ -95,6 +103,8 @@ class Schema3PackageFixtureTests(unittest.TestCase):
             data_path = os.path.join(package_root, "data", "datasets", "light.csv")
             with open(data_path, "w", encoding="utf-8") as data_file:
                 data_file.write(
+                    "Device export,Lumitech LT-100\n"
+                    "Generated for schema test,2026-07-16\n"
                     "timestamp,wrong_column\n"
                     "not-a-date,not-a-number\n"
                 )
@@ -122,6 +132,70 @@ class Schema3PackageFixtureTests(unittest.TestCase):
         self.assertTrue(any("Invalid study ID" in message for message in messages))
         self.assertTrue(any("Invalid participant ID" in message for message in messages))
         self.assertTrue(any("Invalid device ID" in message for message in messages))
+
+    def test_participant_characteristic_participant_id_is_checked_end_to_end(self):
+        def invalidate_characteristic_crossref(package_root):
+            characteristics_path = os.path.join(
+                package_root,
+                "data",
+                "participant_characteristics.csv",
+            )
+            with open(characteristics_path, "w", encoding="utf-8") as characteristics_file:
+                characteristics_file.write(
+                    "participant_internal_id,participant_characteristic_name,"
+                    "participant_characteristic_value,participant_characteristic_unit,"
+                    "participant_characteristic_description\n"
+                    "UNKNOWN,chronotype,intermediate,category,Invalid participant link\n"
+                )
+
+        exit_code, report, _ = self.validate_fixture(mutate=invalidate_characteristic_crossref)
+        messages = [error["message"] for error in report["errors"]]
+        self.assertEqual(exit_code, 1)
+        self.assertTrue(any("Unknown participant ID" in message for message in messages))
+
+    def test_optional_participant_characteristics_resource_may_be_absent(self):
+        def remove_characteristics_resource(package_root):
+            datapackage_path = os.path.join(package_root, "datapackage.json")
+            with open(datapackage_path, encoding="utf-8") as datapackage_file:
+                datapackage = json.load(datapackage_file)
+            datapackage["resources"] = [
+                resource
+                for resource in datapackage["resources"]
+                if resource.get("name") != "participant_characteristics"
+            ]
+            with open(datapackage_path, "w", encoding="utf-8") as datapackage_file:
+                json.dump(datapackage, datapackage_file, indent=2)
+
+        exit_code, report, _ = self.validate_fixture(mutate=remove_characteristics_resource)
+        self.assertEqual(exit_code, 0, report["errors"])
+
+    def test_study_contributor_required_fields_are_checked_end_to_end(self):
+        def remove_contributor_orcid(package_root):
+            study_path = os.path.join(package_root, "data", "study.json")
+            with open(study_path, encoding="utf-8") as study_file:
+                studies = json.load(study_file)
+            del studies[0]["study_contributors"][0]["contributor_orcid"]
+            with open(study_path, "w", encoding="utf-8") as study_file:
+                json.dump(studies, study_file, indent=2)
+
+        exit_code, report, _ = self.validate_fixture(mutate=remove_contributor_orcid)
+        messages = [error["message"] for error in report["errors"]]
+        self.assertEqual(exit_code, 1)
+        self.assertTrue(any("contributor_orcid" in message for message in messages))
+
+    def test_participant_constraints_are_checked_end_to_end(self):
+        def set_invalid_age(package_root):
+            participants_path = os.path.join(package_root, "data", "participants.csv")
+            with open(participants_path, "w", encoding="utf-8") as participants_file:
+                participants_file.write(
+                    "participant_internal_id,participant_age,participant_sex,participant_gender\n"
+                    "P001,121,female,woman\n"
+                )
+
+        exit_code, report, _ = self.validate_fixture(mutate=set_invalid_age)
+        messages = [error["message"] for error in report["errors"]]
+        self.assertEqual(exit_code, 1)
+        self.assertTrue(any("participant_age" in message or "maximum" in message for message in messages))
 
 
 if __name__ == "__main__":
