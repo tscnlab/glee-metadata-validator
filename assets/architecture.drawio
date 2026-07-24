@@ -10,7 +10,7 @@
                 <mxCell id="lane-user" value="Dataset owner / dataset repository" style="swimlane;html=1;startSize=28;horizontal=1;rounded=0;fillColor=#f8fbff;strokeColor=#6c8ebf;fontStyle=1;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="40" y="120" width="1620" height="520" as="geometry"/>
                 </mxCell>
-                <mxCell id="lane-validator" value="glee-metadata-validator" style="swimlane;html=1;startSize=28;horizontal=1;rounded=0;fillColor=#f4fff5;strokeColor=#82b366;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                <mxCell id="lane-validator" value="glc-metadata-validator" style="swimlane;html=1;startSize=28;horizontal=1;rounded=0;fillColor=#f4fff5;strokeColor=#82b366;fontStyle=1;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="40" y="670" width="1620" height="360" as="geometry"/>
                 </mxCell>
                 <mxCell id="lane-github" value="GitHub Actions artifacts and attestations" style="swimlane;html=1;startSize=28;horizontal=1;rounded=0;fillColor=#fbf7ff;strokeColor=#9673a6;fontStyle=1;fontSize=14;" parent="1" vertex="1">
@@ -31,22 +31,22 @@
                 <mxCell id="step3" value="3. Dataset workflow runs&lt;br&gt;&lt;br&gt;.github/workflows/validate.yml&lt;br&gt;name: Validate GLC Dataset&lt;br&gt;&lt;br&gt;Triggers: push to main, pull_request, workflow_dispatch." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="650" y="500" width="400" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="side-template" value="Template workflow&lt;br&gt;&lt;br&gt;glee-metadata-validator/templates/github-actions/validate-glee-dataset.yml&lt;br&gt;&lt;br&gt;Dataset owners copy this once into their own repo." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf3ff;strokeColor=#6c8ebf;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
+                <mxCell id="side-template" value="Template workflow&lt;br&gt;&lt;br&gt;glc-metadata-validator/templates/github-actions/validate-glc-dataset.yml&lt;br&gt;&lt;br&gt;Dataset owners copy this once into their own repo." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf3ff;strokeColor=#6c8ebf;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="110" y="500" width="360" height="120" as="geometry"/>
                 </mxCell>
                 <mxCell id="side-files" value="Dataset owner view&lt;br&gt;&lt;br&gt;GitHub Actions - Validate GLC Dataset&lt;br&gt;&lt;br&gt;Shows pass/fail, logs, and downloadable validation-report artifact." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf3ff;strokeColor=#6c8ebf;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="1230" y="500" width="340" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="step4" value="4. Caller delegates to reusable trusted workflow&lt;br&gt;&lt;br&gt;jobs.validate.uses:&lt;br&gt;tscnlab/glee-metadata-validator/.github/workflows/validate.yml@v0.4.3&lt;br&gt;&lt;br&gt;The copied workflow is installation wiring, not the trust anchor." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
+                <mxCell id="step4" value="4. Caller delegates to reusable trusted workflow&lt;br&gt;&lt;br&gt;jobs.validate.uses:&lt;br&gt;tscnlab/glc-metadata-validator/.github/workflows/validate.yml@v0.5.0&lt;br&gt;&lt;br&gt;The copied workflow is installation wiring, not the trust anchor." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="650" y="720" width="400" height="140" as="geometry"/>
                 </mxCell>
                 <mxCell id="step5" value="5. Validator container executes checks&lt;br&gt;&lt;br&gt;Dockerfile, gleam_validator.py, schemas/2.0.0, data-package.json, data-resource.json&lt;br&gt;&lt;br&gt;Checks schema/profile validity, cross-resource references, referenced files, and checksums." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="650" y="900" width="400" height="110" as="geometry"/>
                 </mxCell>
-                <mxCell id="side-validator-repo" value="Trusted reusable workflow&lt;br&gt;&lt;br&gt;glee-metadata-validator/.github/workflows/validate.yml&lt;br&gt;&lt;br&gt;Owned and versioned by the validator repo." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9f7e9;strokeColor=#82b366;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
+                <mxCell id="side-validator-repo" value="Trusted reusable workflow&lt;br&gt;&lt;br&gt;glc-metadata-validator/.github/workflows/validate.yml&lt;br&gt;&lt;br&gt;Owned and versioned by the validator repo." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9f7e9;strokeColor=#82b366;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="110" y="720" width="360" height="140" as="geometry"/>
                 </mxCell>
-                <mxCell id="side-image" value="Container image identity&lt;br&gt;&lt;br&gt;ghcr.io/tscnlab/glee-validator@sha256:...&lt;br&gt;&lt;br&gt;The resolved digest is recorded in validation.json and checked by registry policy." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9f7e9;strokeColor=#82b366;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
+                <mxCell id="side-image" value="Container image identity&lt;br&gt;&lt;br&gt;ghcr.io/tscnlab/glc-validator@sha256:...&lt;br&gt;&lt;br&gt;The resolved digest is recorded in validation.json and checked by registry policy." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e9f7e9;strokeColor=#82b366;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="1230" y="900" width="340" height="110" as="geometry"/>
                 </mxCell>
                 <mxCell id="step6" value="6. Validator writes outputs&lt;br&gt;&lt;br&gt;validation_out/validation.json&lt;br&gt;validation_out/validated-files-manifest.json&lt;br&gt;validation_out/validation.log&lt;br&gt;validation_out/exit_code.txt&lt;br&gt;&lt;br&gt;This workspace is temporary during the workflow run." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
@@ -79,7 +79,7 @@
                 <mxCell id="step11" value="11. Registry publishes verified outputs&lt;br&gt;&lt;br&gt;registry_out/registry.json&lt;br&gt;registry_out/_validation_artifacts/{owner__repo}/{commit_sha}/&lt;br&gt;&lt;br&gt;Per dataset: current_status, current result, latest_pass result, attestation_verified." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="650" y="1960" width="400" height="130" as="geometry"/>
                 </mxCell>
-                <mxCell id="step12" value="12. Public viewer consumes registry&lt;br&gt;&lt;br&gt;glc_dp_viewer/pages/registry.html&lt;br&gt;&lt;br&gt;Fetches https://tscnlab.github.io/glc-registry/registry.json and displays dataset repo, current status, latest pass, commit links, and reports." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
+                <mxCell id="step12" value="12. Public viewer consumes registry&lt;br&gt;&lt;br&gt;glc-dp-viewer/pages/registry.html&lt;br&gt;&lt;br&gt;Fetches https://tscnlab.github.io/glc-registry/registry.json and displays dataset repo, current status, latest pass, commit links, and reports." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">
                     <mxGeometry x="650" y="2120" width="400" height="120" as="geometry"/>
                 </mxCell>
                 <mxCell id="side-public-endpoint" value="Published registry endpoint&lt;br&gt;&lt;br&gt;glc-registry gh-pages&lt;br&gt;https://tscnlab.github.io/glc-registry/registry.json&lt;br&gt;&lt;br&gt;Verified artifact copies are public under _validation_artifacts/." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontSize=12;align=left;spacing=10;" parent="1" vertex="1">

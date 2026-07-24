@@ -136,7 +136,7 @@
     },
     "datasheet_calibration_spectral_sensitivity": {
       "type": "array",
-      "description": "Light-sensor spectral sensitivity calibration. Required when datasheet_sensor_modality is light.",
+      "description": "Optional light-sensor spectral sensitivity calibration, when documented by the source.",
       "minItems": 1,
       "items": {
         "type": "object",
@@ -160,11 +160,11 @@
     },
     "datasheet_calibration_linearity": {
       "type": "string",
-      "description": "Linearity calibration information. Required when datasheet_sensor_modality is light."
+      "description": "Optional linearity calibration information, when documented by the source."
     },
     "datasheet_calibration_directional_response": {
       "type": "string",
-      "description": "Directional response calibration information. Required when datasheet_sensor_modality is light."
+      "description": "Optional directional-response calibration information, when documented by the source."
     },
     "datasheet_channel": {
       "type": [
