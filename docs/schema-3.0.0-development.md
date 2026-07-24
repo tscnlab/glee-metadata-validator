@@ -29,7 +29,7 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Add required file-group modality arrays with controlled sensor and non-device values.
 - [x] Allow multiple sensor modalities but prohibit mixing sensor and non-device modalities in one file group.
 - [x] Classify `other` as sensor or non-device, allow it only with compatible modalities, and conditionally require or prohibit device metadata.
-- [x] Require device metadata for wear logs, allow optional complete device metadata for questionnaires and diaries, and document when such links are appropriate.
+- [x] Allow optional complete device metadata for questionnaires, diaries, and wear logs, and document that the link is used only when the complete file group unambiguously concerns one device.
 - [x] Require structured instrument name and collection-method metadata for questionnaire, diary, and wear-log file groups.
 - [x] Restrict each file group to one non-sensor modality while preserving multisensor file groups.
 - [ ] Record each additional agreed 3.0.0 schema change in this section.
@@ -80,15 +80,17 @@ Record each agreed schema change here together with its validator, builder, migr
 - [ ] After the full MeLiDos IZTECH datapackage passes validation, replace the Camtrap example with a compact, valid GLC 3.0.0 fixture derived from IZTECH. Include one representative participant and selected sensor, diary, and questionnaire file groups while preserving the important study, participant, device, datasheet, dataset, and variable relationships. Link the example page to the complete validated IZTECH package and its registry entry, and provide the compact fixture as a downloadable ZIP for documentation and automated tests.
 - [ ] Add automated schema-rendering, link, example-package, and Jekyll build tests.
 - [ ] Preserve and regression-test the existing registry dashboard while modernizing the schema documentation.
-- [ ] Implement the sophisticated datapackage viewer described in `glc_dp_viewer/docs/sophisticated-datapackage-viewer.md`, including metadata relationships, variable dictionaries, tabular previews, validation information, time-series displays, provenance, and quality summaries.
+- [ ] Implement the sophisticated datapackage viewer described in `glc-dp-viewer/docs/sophisticated-datapackage-viewer.md`, including metadata relationships, variable dictionaries, tabular previews, validation information, time-series displays, provenance, and quality summaries.
 
 ## Migration and compatibility
 
 - [x] Define the naming boundary: GLC terminology and `glc-dp-profile.json` apply from schema 3.0.0 onward; published GLEAM 1.0.0 and 2.0.0 identifiers remain supported.
 - [x] Prepare the validator, reusable workflow, container name, builder export, registry trust defaults, and IZTECH package for the `glc-metadata-validator` / `glc-validator` names.
-- [ ] Rename the GitHub validator repository from `glee-metadata-validator` to `glc-metadata-validator` and publish the new `ghcr.io/tscnlab/glc-validator` package.
+- [x] Rename the GitHub and local validator repository from `glee-metadata-validator` to `glc-metadata-validator`.
+- [ ] Publish the new `ghcr.io/tscnlab/glc-validator` package.
 - [ ] Rename `glee-metadata`, `guidolin-glee-datasetv2`, and `demo-glee-dataset` to their agreed GLC repository names, rerun validation, and merge the resulting registry correction PRs one repository at a time.
-- [ ] Rename `glc_dp_viewer` to `glc-dp-viewer` last, after updating its schema source and GitHub Pages configuration.
+- [x] Rename the local viewer from `glc_dp_viewer` to `glc-dp-viewer` and update its schema source and GitHub Pages configuration.
+- [ ] Rename the GitHub viewer repository to `glc-dp-viewer`.
 - [ ] After the MeLiDos IZTECH refactoring is finalized, extract its reusable transformations into a shared GLC refactoring library or CLI so future datasets do not start from scratch. Separate general operations—participant-level splitting, tabular conversion, metadata construction, type and unit handling, omission of empty optional properties, and validation—from dataset-specific filename, field, participant, device, timestamp, and exception mappings. Preserve MeLiDos as the first tested configuration and reference implementation.
 - [ ] Document migration of coordinate strings such as `["48.5216", "9.0576"]` to numbers such as `[48.5216, 9.0576]`.
 - [ ] Document migration from the 2.0.0 device-datasheet fields to the generalized 3.0.0 model.

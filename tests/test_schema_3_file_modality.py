@@ -100,7 +100,7 @@ class Schema3FileModalityTests(unittest.TestCase):
             del file_group[field]
         self.assertEqual(self.errors(record), [])
 
-    def test_wear_log_requires_device_and_instrument_metadata(self):
+    def test_wear_log_allows_no_device_but_rejects_partial_device_metadata(self):
         record = self.record()
         file_group = record["dataset_file"][0]
         file_group["dataset_file_modality"] = ["wear_log"]
@@ -113,7 +113,15 @@ class Schema3FileModalityTests(unittest.TestCase):
         }
         self.assertEqual(self.errors(record), [])
 
-        del file_group["dataset_file_crossref_device_id"]
+        for field in (
+            "dataset_file_crossref_device_id",
+            "dataset_file_device_location",
+            "dataset_file_device_location_type",
+        ):
+            del file_group[field]
+        self.assertEqual(self.errors(record), [])
+
+        file_group["dataset_file_device_location"] = "head"
         self.assertTrue(self.errors(record))
 
     def test_non_sensor_instrument_method_rules(self):

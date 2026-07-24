@@ -258,7 +258,7 @@
           "dataset_file_crossref_device_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Internal ID of the device that generated or is directly described by this file group. For questionnaires and diaries, provide this only when the instrument specifically concerns the device; shared timing alone is not sufficient."
+            "description": "Internal ID of the device that generated or is directly described by this file group. For questionnaires, diaries, and wear logs, provide this only when the complete file group unambiguously concerns one device; omit device metadata when it concerns multiple devices collectively or device attribution is unknown. Shared timing alone is not sufficient."
           },
           "dataset_file_device_location": {
             "type": "string",
