@@ -87,7 +87,7 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Define the naming boundary: GLC terminology and `glc-dp-profile.json` apply from schema 3.0.0 onward; published GLEAM 1.0.0 and 2.0.0 identifiers remain supported.
 - [x] Prepare the validator, reusable workflow, container name, builder export, registry trust defaults, and IZTECH package for the `glc-metadata-validator` / `glc-validator` names.
 - [x] Rename the GitHub and local validator repository from `glee-metadata-validator` to `glc-metadata-validator`.
-- [ ] Publish the new `ghcr.io/tscnlab/glc-validator` package.
+- [x] Publish the new public `ghcr.io/tscnlab/glc-validator:0.5.0` package.
 - [ ] Rename `glee-metadata`, `guidolin-glee-datasetv2`, and `demo-glee-dataset` to their agreed GLC repository names, rerun validation, and merge the resulting registry correction PRs one repository at a time.
 - [x] Rename the local viewer from `glc_dp_viewer` to `glc-dp-viewer` and update its schema source and GitHub Pages configuration.
 - [ ] Rename the GitHub viewer repository to `glc-dp-viewer`.
@@ -107,6 +107,6 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Increment the validator application version to 0.5.0.
 - [x] Build and test the 0.5.0 release-candidate validator container locally against the complete MeLiDos IZTECH package.
 - [x] Confirm the validator container includes the pinned `tzdata==2026.3` IANA timezone database and resolves `Europe/Istanbul`.
-- [ ] Publish and pin the released image by digest in the reusable workflow.
+- [x] Publish and pin the released image by digest in the reusable workflow (`sha256:a6e299fc5910af2cf981f3fe984d75206b7d71de363d47ef798c7b5e95d89f1b`).
 - [ ] Update the dataset workflow template and example datasets.
 - [ ] Run end-to-end validation, attestation verification, registry ingestion, and viewer-status checks.
