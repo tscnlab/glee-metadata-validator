@@ -1,0 +1,406 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/glc-dp-profile.json",
+  "name": "glc-dp-profile",
+  "title": "GLC Data Package Profile",
+  "description": "Frictionless profile for GLC data packages. Requires core resources and allows additional resources.",
+  "version": "3.0.0",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://specs.frictionlessdata.io/schemas/data-package.json"
+    },
+    {
+      "type": "object",
+      "required": [
+        "resources",
+        "profile",
+        "schema_version"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "3.0.0",
+          "description": "Release version of the GLC metadata standard used by this package."
+        },
+        "profile": {
+          "type": "string",
+          "anyOf": [
+            {
+              "const": "data-package"
+            },
+            {
+              "pattern": "^schemas/3\\.0\\.0/glc-dp-profile\\.json$"
+            },
+            {
+              "pattern": "^glc-dp-profile\\.json$"
+            },
+            {
+              "pattern": "^(https?|file)://.*/glc-dp-profile\\.json$"
+            }
+          ],
+          "description": "Path/URL to the package profile, or the canonical 'data-package' alias."
+        },
+        "resources": {
+          "type": "array",
+          "minItems": 5,
+          "description": "Resources in the data package. Certain core resources are required by this profile; additional resources may be included with any name.",
+          "items": {
+            "anyOf": [
+              {
+                "title": "Core resource (canonical name)",
+                "type": "object",
+                "required": [
+                  "name",
+                  "path",
+                  "profile"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": [
+                      "study",
+                      "participants",
+                      "datasets",
+                      "devices",
+                      "device_datasheets",
+                      "participant_characteristics"
+                    ],
+                    "description": "Canonical resource name recognized by the GLC profile. Some canonical resources are required; others are optional."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path to the resource file (or folder), relative to the datapackage.json."
+                  },
+                  "profile": {
+                    "type": "string",
+                    "anyOf": [
+                      {
+                        "const": "tabular-data-resource"
+                      },
+                      {
+                        "pattern": "^(.*/)?json-entity-resource\\.json$"
+                      },
+                      {
+                        "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                      }
+                    ]
+                  },
+                  "format": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mediatype": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "schema": {
+                    "type": [
+                      "string",
+                      "object",
+                      "null"
+                    ],
+                    "description": "Table Schema \u2014 for tabular resources only."
+                  },
+                  "jsonSchema": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "JSON Schema \u2014 for non-tabular resources only."
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "profile": {
+                          "anyOf": [
+                            {
+                              "const": "tabular-data-resource"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "schema",
+                        "mediatype"
+                      ],
+                      "properties": {
+                        "mediatype": {
+                          "enum": [
+                            "text/csv",
+                            "application/json"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "profile": {
+                          "anyOf": [
+                            {
+                              "pattern": "json-entity-resource\\.json$"
+                            },
+                            {
+                              "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "jsonSchema",
+                        "mediatype"
+                      ],
+                      "properties": {
+                        "mediatype": {
+                          "const": "application/json"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "title": "Additional resource (any name allowed)",
+                "type": "object",
+                "required": [
+                  "name",
+                  "path",
+                  "profile"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of an additional, non-core resource."
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "profile": {
+                    "type": "string",
+                    "anyOf": [
+                      {
+                        "const": "tabular-data-resource"
+                      },
+                      {
+                        "pattern": "^(.*/)?json-entity-resource\\.json$"
+                      },
+                      {
+                        "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                      }
+                    ]
+                  },
+                  "format": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mediatype": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "schema": {
+                    "type": [
+                      "string",
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "jsonSchema": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "allOf": [
+                  {
+                    "not": {
+                      "properties": {
+                        "name": {
+                          "enum": [
+                            "study",
+                            "participants",
+                            "datasets",
+                            "devices",
+                            "device_datasheets",
+                            "participant_characteristics"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "profile": {
+                          "anyOf": [
+                            {
+                              "const": "tabular-data-resource"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "schema",
+                        "mediatype"
+                      ],
+                      "properties": {
+                        "mediatype": {
+                          "enum": [
+                            "text/csv",
+                            "application/json"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "profile": {
+                          "anyOf": [
+                            {
+                              "pattern": "json-entity-resource\\.json$"
+                            },
+                            {
+                              "pattern": "^(https?|file)://.*/json-entity-resource\\.json$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "jsonSchema",
+                        "mediatype"
+                      ],
+                      "properties": {
+                        "mediatype": {
+                          "const": "application/json"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "study"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "participants"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "datasets"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "devices"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "const": "device_datasheets"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

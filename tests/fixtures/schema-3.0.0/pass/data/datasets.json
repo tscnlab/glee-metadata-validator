@@ -1,0 +1,86 @@
+[
+  {
+    "schema_version": "3.0.0",
+    "dataset_internal_id": "DS001",
+    "dataset_participant_associated": true,
+    "dataset_crossref": {
+      "dataset_crossref_study_id": "STUDY001",
+      "dataset_crossref_participant_id": "P001"
+    },
+    "dataset_timezone": "Europe/Berlin",
+    "dataset_location": [
+      52.52,
+      13.405
+    ],
+    "dataset_variable_terms": [
+      {
+        "term": "other",
+        "label": "Other"
+      }
+    ],
+    "dataset_file": [
+      {
+        "dataset_file_modality": [
+          "light"
+        ],
+        "dataset_file_crossref_device_id": "D001",
+        "dataset_file_device_location": "non-dominant wrist",
+        "dataset_file_device_location_type": "body_worn",
+        "dataset_file_temporal_resolution": {
+          "resolution_type": "fixed_interval",
+          "value": 60,
+          "unit": "second"
+        },
+        "dataset_file_instructions": "Wear the device on the non-dominant wrist.",
+        "dataset_file_names": [
+          "data/datasets/light.csv"
+        ],
+        "dataset_file_format": "csv",
+        "dataset_file_encoding": [
+          "UTF-8"
+        ],
+        "dataset_file_timezone": "Europe/Berlin",
+        "dataset_file_datetime": {
+          "dataset_file_datetime_source": "column",
+          "dataset_file_datetime_date": "timestamp",
+          "dataset_file_datetime_dateformat": "YYYY-MM-DD HH:mm:ss",
+          "dataset_file_datetime_time": null,
+          "dataset_file_datetime_timeformat": null
+        },
+        "dataset_file_role": "primary",
+        "dataset_file_data_state": "raw",
+        "dataset_file_header_row": 3,
+        "dataset_file_preprocessing": {
+          "dataset_file_preprocessing_bol": false,
+          "dataset_file_preprocessing_desc": null
+        },
+        "dataset_file_variables": [
+          {
+            "dataset_file_variables_name": "timestamp",
+            "dataset_file_variables_labels": "Timestamp",
+            "dataset_file_variables_type": "string",
+            "dataset_file_variables_calibration": null,
+            "dataset_file_variables_term": {
+              "variable_term": "other",
+              "variable_name": "timestamp"
+            }
+          },
+          {
+            "dataset_file_variables_name": "illuminance",
+            "dataset_file_variables_labels": "Illuminance",
+            "dataset_file_variables_units": "lux",
+            "dataset_file_variables_type": "numeric",
+            "dataset_file_variables_calibration": null,
+            "dataset_file_variables_term": {
+              "variable_term": "other",
+              "variable_name": "illuminance"
+            }
+          }
+        ],
+        "primary_variables": [
+          "illuminance"
+        ]
+      }
+    ]
+  }
+]

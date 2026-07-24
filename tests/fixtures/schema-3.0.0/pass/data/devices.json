@@ -1,0 +1,18 @@
+[
+  {
+    "schema_version": "3.0.0",
+    "device_internal_id": "D001",
+    "device_manufacturer": "Lumitech",
+    "device_model": "LT-100",
+    "device_serial_number": "SN001",
+    "device_calibration_date": "2026-01-15",
+    "device_firmware_version": "1.2.3",
+    "device_datasheet_id": "lumitech-lt100-v1.0",
+    "device_sensors": [
+      {
+        "device_sensor_type": "photopic light sensor",
+        "device_sensor_datasheet_id": null
+      }
+    ]
+  }
+]

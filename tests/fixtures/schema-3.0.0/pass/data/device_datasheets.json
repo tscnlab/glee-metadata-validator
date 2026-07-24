@@ -1,0 +1,36 @@
+[
+  {
+    "schema_version": "3.0.0",
+    "datasheet_id": "lumitech-lt100-v1.0",
+    "datasheet_version": "1.0",
+    "datasheet_manufacturer": "Lumitech",
+    "datasheet_type": "Wearable light sensor",
+    "datasheet_sensor_modality": [
+      "light"
+    ],
+    "datasheet_sensor_modality_other": null,
+    "datasheet_model": "LT-100",
+    "datasheet_calibration_interval": 365,
+    "datasheet_calibration_method": "Reference lamp comparison",
+    "datasheet_calibration_accuracy": "+/-2%",
+    "datasheet_calibration_range": "0-100,000 lux",
+    "datasheet_calibration_notes": null,
+    "datasheet_calibration_parameters": null,
+    "datasheet_calibration_spectral_sensitivity": [
+      {
+        "datasheet_calibration_spectral_sensitivity_wavelength": 555,
+        "datasheet_calibration_spectral_sensitivity_relative": 1.0
+      }
+    ],
+    "datasheet_calibration_linearity": "+/-2% over the measurement range",
+    "datasheet_calibration_directional_response": "Cosine corrected",
+    "datasheet_channel": [
+      {
+        "datasheet_channel_nr": 1,
+        "datasheet_channel_name": "illuminance",
+        "datasheet_channel_unit": "lux",
+        "datasheet_channel_description": "Photopic illuminance"
+      }
+    ]
+  }
+]

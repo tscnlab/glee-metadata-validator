@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/study.schema.json",
+  "version": "3.0.0",
+  "title": "Study Schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of the metadata schema used by this study"
+    },
+    "study_internal_id": {
+      "type": "string",
+      "description": "Unique identifier for study"
+    },
+    "study_title": {
+      "type": "string",
+      "description": "Study name"
+    },
+    "study_preregistration": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "DOI, URL, or concise status note for study or analysis preregistration. Clearly distinguish analysis preregistration from preregistration of the study or data collection."
+    },
+    "study_ethics": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Name of ethics committee and approval number"
+    },
+    "study_registration": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Registry and ID of clinical trial registration"
+    },
+    "study_short_description": {
+      "type": "string",
+      "description": "Short narrative description of the study"
+    },
+    "study_sample": {
+      "type": "string",
+      "description": "Short description of the study sample"
+    },
+    "study_groups": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Groups in the study",
+      "items": {
+        "type": "object",
+        "properties": {
+          "study_group_name": {
+            "type": "string",
+            "description": "Group name"
+          },
+          "study_group_description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Group description"
+          },
+          "study_group_size": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Sample size"
+          },
+          "study_group_inclusion": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "Inclusion criteria for sample group, given as an array of strings",
+            "items": {
+              "type": "string"
+            }
+          },
+          "study_group_exclusion": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "Exclusion criteria for sample group, given as an array of strings",
+            "items": {
+              "type": "string"
+            }
+          },
+          "study_group_datasets": {
+            "type": "array",
+            "description": "Dataset internal IDs linked to this study group",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "study_group_name",
+          "study_group_datasets"
+        ]
+      }
+    },
+    "study_intervention": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Short description of the study intervention, if any"
+    },
+    "study_setting": {
+      "type": "string",
+      "description": "Description of the study setting"
+    },
+    "study_geographical_location": {
+      "type": "string",
+      "description": "Geographical location and context (city/rural, urban)"
+    },
+    "study_contributors": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Any contributors to the study",
+      "items": {
+        "$ref": "contributor.schema.json"
+      }
+    },
+    "study_datasets": {
+      "type": "array",
+      "description": "Datasets contained within the study",
+      "items": {
+        "type": "string"
+      }
+    },
+    "study_type": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Type of study"
+    },
+    "study_funding_sources": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Any funding sources supporting the project. If the funding number is available, it should be given",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "study_keywords": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Key words describing the projects",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "study_internal_id",
+    "study_title",
+    "study_short_description",
+    "study_sample",
+    "study_setting",
+    "study_geographical_location",
+    "study_datasets"
+  ],
+  "$comment": "Missing-value convention: Optional properties with no value should be omitted rather than represented as null, an empty string, or an empty array. Required properties must remain present and satisfy their schema, including where null is explicitly permitted."
+}
