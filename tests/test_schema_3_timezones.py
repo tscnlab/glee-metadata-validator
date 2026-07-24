@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
-from gleam_validator import validate_dataset_timezones
+from glc_validator import validate_dataset_timezones
 
 
 class Schema3TimezoneTests(unittest.TestCase):
@@ -39,7 +39,7 @@ class Schema3TimezoneTests(unittest.TestCase):
         self.assertEqual(errors, [])
 
     def test_reports_missing_runtime_timezone_database_once(self):
-        with patch("gleam_validator.ZoneInfo", side_effect=ZoneInfoNotFoundError):
+        with patch("glc_validator.ZoneInfo", side_effect=ZoneInfoNotFoundError):
             errors = validate_dataset_timezones([self.dataset()], "3.0.0")
 
         self.assertEqual(len(errors), 1)

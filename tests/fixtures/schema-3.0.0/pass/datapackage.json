@@ -1,5 +1,5 @@
 {
-  "profile": "schemas/3.0.0/gleam-dp-profile.json",
+  "profile": "schemas/3.0.0/glc-dp-profile.json",
   "schema_version": "3.0.0",
   "name": "schema-3-fixture",
   "title": "Schema 3.0.0 validation fixture",

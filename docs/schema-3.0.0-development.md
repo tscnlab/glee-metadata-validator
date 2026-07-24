@@ -72,8 +72,24 @@ Record each agreed schema change here together with its validator, builder, migr
 - [x] Import a complete package through the browser builder, export its ZIP, restore the referenced data file, and validate the exact builder output with the 3.0.0 validator.
 - [x] Update the schema 3.0.0 testing builder's displayed schema version and development documentation.
 
+## Viewer work
+
+- [ ] Connect the viewer to the same canonical, versioned schema source used by the builder and validator.
+- [ ] Update schema documentation rendering for nullable types, nested objects and arrays, references, combinators, and conditional requirements used by 3.0.0.
+- [ ] Remove duplicate and obsolete schema copies and legacy GLEAM/Camtrap content.
+- [ ] After the full MeLiDos IZTECH datapackage passes validation, replace the Camtrap example with a compact, valid GLC 3.0.0 fixture derived from IZTECH. Include one representative participant and selected sensor, diary, and questionnaire file groups while preserving the important study, participant, device, datasheet, dataset, and variable relationships. Link the example page to the complete validated IZTECH package and its registry entry, and provide the compact fixture as a downloadable ZIP for documentation and automated tests.
+- [ ] Add automated schema-rendering, link, example-package, and Jekyll build tests.
+- [ ] Preserve and regression-test the existing registry dashboard while modernizing the schema documentation.
+- [ ] Implement the sophisticated datapackage viewer described in `glc_dp_viewer/docs/sophisticated-datapackage-viewer.md`, including metadata relationships, variable dictionaries, tabular previews, validation information, time-series displays, provenance, and quality summaries.
+
 ## Migration and compatibility
 
+- [x] Define the naming boundary: GLC terminology and `glc-dp-profile.json` apply from schema 3.0.0 onward; published GLEAM 1.0.0 and 2.0.0 identifiers remain supported.
+- [x] Prepare the validator, reusable workflow, container name, builder export, registry trust defaults, and IZTECH package for the `glc-metadata-validator` / `glc-validator` names.
+- [ ] Rename the GitHub validator repository from `glee-metadata-validator` to `glc-metadata-validator` and publish the new `ghcr.io/tscnlab/glc-validator` package.
+- [ ] Rename `glee-metadata`, `guidolin-glee-datasetv2`, and `demo-glee-dataset` to their agreed GLC repository names, rerun validation, and merge the resulting registry correction PRs one repository at a time.
+- [ ] Rename `glc_dp_viewer` to `glc-dp-viewer` last, after updating its schema source and GitHub Pages configuration.
+- [ ] After the MeLiDos IZTECH refactoring is finalized, extract its reusable transformations into a shared GLC refactoring library or CLI so future datasets do not start from scratch. Separate general operations—participant-level splitting, tabular conversion, metadata construction, type and unit handling, omission of empty optional properties, and validation—from dataset-specific filename, field, participant, device, timestamp, and exception mappings. Preserve MeLiDos as the first tested configuration and reference implementation.
 - [ ] Document migration of coordinate strings such as `["48.5216", "9.0576"]` to numbers such as `[48.5216, 9.0576]`.
 - [ ] Document migration from the 2.0.0 device-datasheet fields to the generalized 3.0.0 model.
 - [ ] Document migration from top-level `dataset_datetime` to per-file-group `dataset_file_datetime`.
@@ -84,10 +100,11 @@ Record each agreed schema change here together with its validator, builder, migr
 ## Release work
 
 - [x] Verify the validator and builder 3.0.0 schema directories are identical.
-- [ ] Update validator and builder documentation to list 3.0.0 as supported.
-- [ ] Increment the validator application version.
-- [ ] Build and test the new validator container image.
-- [ ] Confirm the validator container includes current IANA timezone data.
+- [x] Rename the unreleased 3.0.0 profile to `glc-dp-profile.json` and update GLC terminology while preserving the published GLEAM profile identifiers for 1.0.0 and 2.0.0.
+- [x] Update validator and builder documentation to list 3.0.0 as supported.
+- [x] Increment the validator application version to 0.5.0.
+- [x] Build and test the 0.5.0 release-candidate validator container locally against the complete MeLiDos IZTECH package.
+- [x] Confirm the validator container includes the pinned `tzdata==2026.3` IANA timezone database and resolves `Europe/Istanbul`.
 - [ ] Publish and pin the released image by digest in the reusable workflow.
 - [ ] Update the dataset workflow template and example datasets.
 - [ ] Run end-to-end validation, attestation verification, registry ingestion, and viewer-status checks.

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from gleam_validator import CORE_REQUIRED, validate_crossrefs
+from glc_validator import CORE_REQUIRED, validate_crossrefs
 
 
 class MissingResourceTests(unittest.TestCase):

@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 
-from gleam_validator import read_tabular_file
+from glc_validator import read_tabular_file
 
 
 class TabularHeaderDetectionTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 {
   "$schema": "https://frictionlessdata.io/schemas/table-schema.json",
-  "$id": "https://raw.githubusercontent.com/<your-org-or-username>/<your-repo>/main/schemas/3.0.0/participants.schema.json",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/participants.schema.json",
   "version": "3.0.0",
   "fields": [
     {

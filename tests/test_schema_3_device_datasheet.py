@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from gleam_validator import validate_against_json_schema
+from glc_validator import validate_against_json_schema
 
 
 SCHEMA_PATH = os.path.join(
@@ -54,14 +54,18 @@ class Schema3DeviceDatasheetTests(unittest.TestCase):
     def test_accepts_complete_light_datasheet(self):
         self.assertEqual(self.errors(light_datasheet()), [])
 
-    def test_requires_light_specific_calibration_fields(self):
+    def test_accepts_missing_optional_light_calibration_fields_but_requires_range(self):
         datasheet = light_datasheet()
         del datasheet["datasheet_calibration_spectral_sensitivity"]
+        del datasheet["datasheet_calibration_linearity"]
+        del datasheet["datasheet_calibration_directional_response"]
+
+        self.assertEqual(self.errors(datasheet), [])
+
         del datasheet["datasheet_calibration_range"]
 
         errors = self.errors(datasheet)
 
-        self.assertTrue(any("datasheet_calibration_spectral_sensitivity" in error["message"] for error in errors))
         self.assertTrue(any("datasheet_calibration_range" in error["message"] for error in errors))
 
     def test_accepts_non_light_datasheet_with_general_parameters(self):
@@ -138,14 +142,14 @@ class Schema3DeviceDatasheetTests(unittest.TestCase):
 
         self.assertEqual(self.errors(datasheet), [])
 
-    def test_requires_light_fields_when_light_is_one_of_multiple_modalities(self):
+    def test_accepts_missing_optional_light_fields_with_multiple_modalities(self):
         datasheet = light_datasheet()
         datasheet["datasheet_sensor_modality"] = ["temperature", "light"]
+        del datasheet["datasheet_calibration_spectral_sensitivity"]
         del datasheet["datasheet_calibration_linearity"]
+        del datasheet["datasheet_calibration_directional_response"]
 
-        errors = self.errors(datasheet)
-
-        self.assertTrue(any("datasheet_calibration_linearity" in error["message"] for error in errors))
+        self.assertEqual(self.errors(datasheet), [])
 
     def test_rejects_duplicate_or_empty_modalities(self):
         duplicate = light_datasheet()

@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from gleam_validator import validate_against_json_schema, validate_dataset_device_ids
+from glc_validator import validate_against_json_schema, validate_dataset_device_ids
 from test_schema_3_file_datetime import dataset_record
 
 

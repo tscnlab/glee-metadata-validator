@@ -232,9 +232,6 @@
       },
       "then": {
         "required": [
-          "datasheet_calibration_spectral_sensitivity",
-          "datasheet_calibration_linearity",
-          "datasheet_calibration_directional_response",
           "datasheet_calibration_range"
         ]
       }

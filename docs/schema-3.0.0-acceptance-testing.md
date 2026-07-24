@@ -41,7 +41,7 @@ The automated suite also covers valid and invalid alternatives that cannot coexi
 ```bash
 VALIDATION_JSON=/tmp/validation.json \
 VALIDATION_MANIFEST=/tmp/validated-files-manifest.json \
-./.venv/bin/python gleam_validator.py /path/to/package/datapackage.json
+./.venv/bin/python glc_validator.py /path/to/package/datapackage.json
 ```
 
 Review `/tmp/validation.json` for errors and warnings. The manifest records the files and checksums included in that validation run.

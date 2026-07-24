@@ -2,7 +2,7 @@ import unittest
 
 import petl
 
-from gleam_validator import warn_unreferenced_participant_ids
+from glc_validator import warn_unreferenced_participant_ids
 
 
 class ParticipantDatasetCoverageTests(unittest.TestCase):

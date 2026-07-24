@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import gleam_validator
+import glc_validator
 
 
 FIXTURE_ROOT = os.path.join(
@@ -34,7 +34,7 @@ class Schema3PackageFixtureTests(unittest.TestCase):
             }
             with patch.dict(os.environ, environment, clear=False):
                 with contextlib.redirect_stdout(io.StringIO()):
-                    exit_code = gleam_validator.validate_crossrefs(
+                    exit_code = glc_validator.validate_crossrefs(
                         os.path.join(package_root, "datapackage.json")
                     )
 
@@ -169,7 +169,7 @@ class Schema3PackageFixtureTests(unittest.TestCase):
         exit_code, report, _ = self.validate_fixture(mutate=remove_characteristics_resource)
         self.assertEqual(exit_code, 0, report["errors"])
 
-    def test_study_contributor_required_fields_are_checked_end_to_end(self):
+    def test_study_contributor_orcid_is_optional_end_to_end(self):
         def remove_contributor_orcid(package_root):
             study_path = os.path.join(package_root, "data", "study.json")
             with open(study_path, encoding="utf-8") as study_file:
@@ -179,9 +179,27 @@ class Schema3PackageFixtureTests(unittest.TestCase):
                 json.dump(studies, study_file, indent=2)
 
         exit_code, report, _ = self.validate_fixture(mutate=remove_contributor_orcid)
-        messages = [error["message"] for error in report["errors"]]
+        self.assertEqual(exit_code, 0, report["errors"])
+
+    def test_study_contributor_orcid_must_be_string_when_supplied(self):
+        def set_invalid_contributor_orcid(package_root):
+            study_path = os.path.join(package_root, "data", "study.json")
+            with open(study_path, encoding="utf-8") as study_file:
+                studies = json.load(study_file)
+            studies[0]["study_contributors"][0]["contributor_orcid"] = 123
+            with open(study_path, "w", encoding="utf-8") as study_file:
+                json.dump(studies, study_file, indent=2)
+
+        exit_code, report, _ = self.validate_fixture(
+            mutate=set_invalid_contributor_orcid
+        )
         self.assertEqual(exit_code, 1)
-        self.assertTrue(any("contributor_orcid" in message for message in messages))
+        self.assertTrue(
+            any(
+                error.get("path", [])[-1:] == ["contributor_orcid"]
+                for error in report["errors"]
+            )
+        )
 
     def test_participant_constraints_are_checked_end_to_end(self):
         def set_invalid_age(package_root):

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/<your-org-or-username>/<your-repo>/main/schemas/3.0.0/device_datasheet.schema.json",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/device_datasheet.schema.json",
   "version": "3.0.0",
   "title": "Generalized Device/Sensor Datasheet Schema",
   "description": "Generalized metadata schema for device and sensor datasheets.",
@@ -232,9 +232,6 @@
       },
       "then": {
         "required": [
-          "datasheet_calibration_spectral_sensitivity",
-          "datasheet_calibration_linearity",
-          "datasheet_calibration_directional_response",
           "datasheet_calibration_range"
         ]
       }
@@ -387,5 +384,6 @@
         }
       ]
     }
-  ]
+  ],
+  "$comment": "Missing-value convention: Optional properties with no value should be omitted rather than represented as null, an empty string, or an empty array. Required properties must remain present and satisfy their schema, including where null is explicitly permitted."
 }

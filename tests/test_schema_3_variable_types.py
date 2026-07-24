@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from gleam_validator import validate_against_json_schema, validate_declared_column_values
+from glc_validator import validate_against_json_schema, validate_declared_column_values
 from test_schema_3_file_datetime import dataset_record
 
 
@@ -54,6 +54,19 @@ class Schema3VariableTypeTests(unittest.TestCase):
 
         self.assertTrue(any("dataset_file_variables_type" in error["message"] for error in errors))
 
+    def test_schema_accepts_optional_nonempty_variable_description(self):
+        record = dataset_record(collection_datetime())
+        variable = record["dataset_file"][0]["dataset_file_variables"][0]
+        variable["dataset_file_variables_description"] = "What time did you get into bed?"
+
+        valid_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertEqual(valid_errors, [])
+
+        variable["dataset_file_variables_description"] = ""
+        empty_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertTrue(empty_errors)
+        self.assertTrue(any("dataset_file_variables_description" in error["path"] for error in empty_errors))
+
     def test_schema_requires_factor_levels_only_for_factor(self):
         record = dataset_record(collection_datetime())
         variable = record["dataset_file"][0]["dataset_file_variables"][0]
@@ -66,6 +79,37 @@ class Schema3VariableTypeTests(unittest.TestCase):
         prohibited_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
         self.assertTrue(prohibited_errors)
 
+    def test_schema_requires_units_only_for_numeric_and_integer_variables(self):
+        record = dataset_record(collection_datetime())
+        variable = record["dataset_file"][0]["dataset_file_variables"][0]
+        variable["dataset_file_variables_type"] = "factor"
+        variable["dataset_file_variables_factor_levels"] = [{"value": "a", "label": "A"}]
+
+        factor_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertEqual(factor_errors, [])
+
+        variable["dataset_file_variables_units"] = "N/A"
+        factor_with_units_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertTrue(factor_with_units_errors)
+
+        variable["dataset_file_variables_type"] = "string"
+        variable.pop("dataset_file_variables_factor_levels")
+        variable.pop("dataset_file_variables_units")
+        string_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertEqual(string_errors, [])
+
+        variable["dataset_file_variables_type"] = "numeric"
+        missing_units_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertTrue(any("dataset_file_variables_units" in error["message"] for error in missing_units_errors))
+
+        variable["dataset_file_variables_units"] = "Unknown"
+        placeholder_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertTrue(placeholder_errors)
+
+        variable["dataset_file_variables_units"] = "lx"
+        numeric_errors = validate_against_json_schema([record], SCHEMA_PATH, "datasets")
+        self.assertEqual(numeric_errors, [])
+
     def test_validates_numeric_integer_and_boolean_values(self):
         numeric_errors, _ = self.content_errors(
             [{"value": "1.5"}, {"value": "bad"}], self.variable("numeric")
@@ -74,7 +118,8 @@ class Schema3VariableTypeTests(unittest.TestCase):
             [{"value": "2"}, {"value": "2.0"}], self.variable("integer")
         )
         boolean_errors, _ = self.content_errors(
-            [{"value": "TRUE"}, {"value": "no"}], self.variable("boolean")
+            [{"value": "TRUE"}, {"value": "0"}, {"value": "1"}, {"value": "no"}],
+            self.variable("boolean"),
         )
 
         self.assertEqual(len(numeric_errors), 1)

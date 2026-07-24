@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/<your-org-or-username>/<your-repo>/main/schemas/3.0.0/dataset.schema.json",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/dataset.schema.json",
   "version": "3.0.0",
   "title": "Dataset Schema",
   "type": "object",
@@ -347,6 +347,14 @@
               }
             ]
           },
+          "dataset_file_description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "description": "Concise human-readable description of the file group’s contents, scope, and intended interpretation. Use when important information is not represented by the structured file-group metadata."
+          },
           "dataset_file_instructions": {
             "type": "string",
             "minLength": 1,
@@ -562,9 +570,24 @@
                   "type": "string",
                   "description": "Variable name as clear name"
                 },
+                "dataset_file_variables_description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Optional full description, questionnaire prompt, or interpretation of the variable. Keep the label concise and use this field for complete source wording and instructions."
+                },
                 "dataset_file_variables_units": {
                   "type": "string",
-                  "description": "Unit"
+                  "minLength": 1,
+                  "description": "UCUM unit code or a precise custom unit. Required for numeric and integer variables and omitted for string, boolean, and factor variables. Do not use placeholders such as N/A or Unknown.",
+                  "not": {
+                    "enum": [
+                      "N/A",
+                      "NA",
+                      "n/a",
+                      "Unknown",
+                      "unknown"
+                    ]
+                  }
                 },
                 "dataset_file_variables_calibration": {
                   "type": [
@@ -582,7 +605,7 @@
                     "integer",
                     "factor"
                   ],
-                  "description": "Expected value type for non-empty cells in this variable column"
+                  "description": "Expected value type for non-empty cells in this variable column. Boolean values may be encoded as true/false or 0/1. Select factor only for categorical variables with a finite set of defined levels, such as 0 = No and 1 = Yes. A numerical factor, coefficient, ratio, proportion, percentage, score, count, or other quantitatively meaningful value must instead be declared numeric or integer."
                 },
                 "dataset_file_variables_factor_levels": {
                   "type": "array",
@@ -664,7 +687,6 @@
               "required": [
                 "dataset_file_variables_name",
                 "dataset_file_variables_labels",
-                "dataset_file_variables_units",
                 "dataset_file_variables_type",
                 "dataset_file_variables_term"
               ],
@@ -689,6 +711,33 @@
                     "not": {
                       "required": [
                         "dataset_file_variables_factor_levels"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "dataset_file_variables_type": {
+                        "enum": [
+                          "numeric",
+                          "integer"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "dataset_file_variables_type"
+                    ]
+                  },
+                  "then": {
+                    "required": [
+                      "dataset_file_variables_units"
+                    ]
+                  },
+                  "else": {
+                    "not": {
+                      "required": [
+                        "dataset_file_variables_units"
                       ]
                     }
                   }
@@ -821,27 +870,10 @@
               "properties": {
                 "dataset_file_modality": {
                   "contains": {
-                    "const": "wear_log"
-                  }
-                }
-              }
-            },
-            "then": {
-              "required": [
-                "dataset_file_crossref_device_id",
-                "dataset_file_device_location",
-                "dataset_file_device_location_type"
-              ]
-            }
-          },
-          {
-            "if": {
-              "properties": {
-                "dataset_file_modality": {
-                  "contains": {
                     "enum": [
                       "questionnaire",
-                      "diary"
+                      "diary",
+                      "wear_log"
                     ]
                   }
                 }
@@ -1233,5 +1265,6 @@
     "dataset_location",
     "dataset_variable_terms",
     "dataset_file"
-  ]
+  ],
+  "$comment": "Missing-value convention: Optional properties with no value should be omitted rather than represented as null, an empty string, or an empty array. Required properties must remain present and satisfy their schema, including where null is explicitly permitted."
 }

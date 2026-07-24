@@ -22,7 +22,7 @@
         "string",
         "null"
       ],
-      "description": "DOI (Digital Object Identifier) of pre-registration document describing data collection"
+      "description": "DOI, URL, or concise status note for study or analysis preregistration. Clearly distinguish analysis preregistration from preregistration of the study or data collection."
     },
     "study_ethics": {
       "type": [

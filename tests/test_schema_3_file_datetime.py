@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from gleam_validator import (
+from glc_validator import (
     parse_collection_timestamp,
     parse_timestamps_from_rows,
     validate_against_json_schema,
@@ -55,7 +55,6 @@ def dataset_record(datetime_metadata):
                     {
                         "dataset_file_variables_name": "timestamp",
                         "dataset_file_variables_labels": "Timestamp",
-                        "dataset_file_variables_units": "ISO 8601",
                         "dataset_file_variables_type": "string",
                         "dataset_file_variables_calibration": None,
                         "dataset_file_variables_term": {

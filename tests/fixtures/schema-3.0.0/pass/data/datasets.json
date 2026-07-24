@@ -58,7 +58,6 @@
           {
             "dataset_file_variables_name": "timestamp",
             "dataset_file_variables_labels": "Timestamp",
-            "dataset_file_variables_units": "ISO 8601",
             "dataset_file_variables_type": "string",
             "dataset_file_variables_calibration": null,
             "dataset_file_variables_term": {

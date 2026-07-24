@@ -2,19 +2,18 @@
 
 <img src="assets/GLC_Logo.png" alt="Global Light Commons logo" width="320">
 
-This repository contains the GLC metadata validator for GLEAM-style Frictionless data packages. It provides the canonical schema bundle and Dockerized validation script used to check that a metadata repository is complete, internally consistent, and compatible with the supported GLC schema versions.
+This repository contains the GLC metadata validator for GLC Frictionless data packages. It provides the canonical schema bundle and Dockerized validation script used to check that a metadata repository is complete, internally consistent, and compatible with the supported GLC schema versions.
 
 ## What is included
 
-- `gleam_validator.py`: the Python validator entrypoint.
+- `glc_validator.py`: the Python validator entrypoint.
 - `Dockerfile`: a containerized runtime for running validation consistently in local development and CI.
 - `requirements.txt`: pinned Python dependencies used by the validator.
 - `VERSION`: the validator release version.
-- `schemas/1.0.0/` and `schemas/2.0.0/`: supported GLC schema bundles, including the Frictionless data package profile and JSON/Table Schema files for core resources.
-- `schemas/3.0.0/`: the unreleased development bundle for the next breaking schema revision. It is not yet supported by the published validator image.
+- `schemas/1.0.0/`, `schemas/2.0.0/`, and `schemas/3.0.0/`: supported GLC schema bundles, including the Frictionless data package profile and JSON/Table Schema files for core resources.
 - `docs/schema-3.0.0-development.md`: the implementation and release checklist for coordinating schema, validator, and builder changes.
 - `.github/workflows/validate.yml`: a reusable trusted validation workflow that runs the validator container, uploads reports, and attests the validation outputs.
-- `templates/github-actions/validate-glee-dataset.yml`: a ready-to-copy caller workflow for dataset repositories.
+- `templates/github-actions/validate-glc-dataset.yml`: a ready-to-copy caller workflow for dataset repositories.
 
 The validator currently checks:
 
@@ -85,13 +84,13 @@ docker run --rm \
 For routine GLC validation, copy the caller workflow template from this repository into the dataset or metadata repository you want to validate:
 
 ```text
-templates/github-actions/validate-glee-dataset.yml
+templates/github-actions/validate-glc-dataset.yml
 ```
 
 Place it at:
 
 ```text
-.github/workflows/validate-glee-dataset.yml
+.github/workflows/validate-glc-dataset.yml
 ```
 
 The workflow runs on pushes to `main`, pull requests, and manual dispatch. It calls the trusted reusable workflow in this repository instead of duplicating validation logic in each dataset repository.
@@ -111,7 +110,7 @@ Registry automation should verify the attested `validation-report` artifact for 
 The workflow uses:
 
 ```text
-ghcr.io/tscnlab/glee-validator:0.4.3
+ghcr.io/tscnlab/glc-validator:0.5.0
 ```
 
 For local validation without GitHub Actions, run the same container from the repository that contains `datapackage.json`:
@@ -120,13 +119,13 @@ For local validation without GitHub Actions, run the same container from the rep
 docker run --rm \
   -v "$PWD":/data \
   -w /data \
-  ghcr.io/tscnlab/glee-validator:0.4.3 \
+  ghcr.io/tscnlab/glc-validator:0.5.0 \
   datapackage.json
 ```
 
 ## Expected package shape
 
-The metadata repository should include a `datapackage.json` with a supported `schema_version`, currently `1.0.0` or `2.0.0`. The package must declare the required core resources using the canonical resource names:
+The metadata repository should include a `datapackage.json` with a supported `schema_version`, currently `1.0.0`, `2.0.0`, or `3.0.0`. The package must declare the required core resources using the canonical resource names:
 
 - `study`
 - `participants`
@@ -154,7 +153,7 @@ Environment variables:
 Run the validator directly with Python:
 
 ```sh
-python gleam_validator.py path/to/datapackage.json
+python glc_validator.py path/to/datapackage.json
 ```
 
 Or rebuild and run the Docker image after making changes:

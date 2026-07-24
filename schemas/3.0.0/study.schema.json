@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/<your-org-or-username>/<your-repo>/main/schemas/3.0.0/study.schema.json",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/study.schema.json",
   "version": "3.0.0",
   "title": "Study Schema",
   "type": "object",
@@ -22,7 +22,7 @@
         "string",
         "null"
       ],
-      "description": "DOI (Digital Object Identifier) of pre-registration document describing data collection"
+      "description": "DOI, URL, or concise status note for study or analysis preregistration. Clearly distinguish analysis preregistration from preregistration of the study or data collection."
     },
     "study_ethics": {
       "type": [
@@ -178,5 +178,6 @@
     "study_setting",
     "study_geographical_location",
     "study_datasets"
-  ]
+  ],
+  "$comment": "Missing-value convention: Optional properties with no value should be omitted rather than represented as null, an empty string, or an empty array. Required properties must remain present and satisfy their schema, including where null is explicitly permitted."
 }

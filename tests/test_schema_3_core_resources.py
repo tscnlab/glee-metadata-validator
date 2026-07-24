@@ -2,7 +2,7 @@ import json
 import os
 import unittest
 
-from gleam_validator import validate_against_json_schema
+from glc_validator import validate_against_json_schema
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))

@@ -562,9 +562,24 @@
                   "type": "string",
                   "description": "Variable name as clear name"
                 },
+                "dataset_file_variables_description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Optional full description, questionnaire prompt, or interpretation of the variable. Keep the label concise and use this field for complete source wording and instructions."
+                },
                 "dataset_file_variables_units": {
                   "type": "string",
-                  "description": "Unit"
+                  "minLength": 1,
+                  "description": "UCUM unit code or a precise custom unit. Required for numeric and integer variables and omitted for string, boolean, and factor variables. Do not use placeholders such as N/A or Unknown.",
+                  "not": {
+                    "enum": [
+                      "N/A",
+                      "NA",
+                      "n/a",
+                      "Unknown",
+                      "unknown"
+                    ]
+                  }
                 },
                 "dataset_file_variables_calibration": {
                   "type": [
@@ -582,7 +597,7 @@
                     "integer",
                     "factor"
                   ],
-                  "description": "Expected value type for non-empty cells in this variable column"
+                  "description": "Expected value type for non-empty cells in this variable column. Boolean values may be encoded as true/false or 0/1. Select factor only for categorical variables with a finite set of defined levels, such as 0 = No and 1 = Yes. A numerical factor, coefficient, ratio, proportion, percentage, score, count, or other quantitatively meaningful value must instead be declared numeric or integer."
                 },
                 "dataset_file_variables_factor_levels": {
                   "type": "array",
@@ -664,7 +679,6 @@
               "required": [
                 "dataset_file_variables_name",
                 "dataset_file_variables_labels",
-                "dataset_file_variables_units",
                 "dataset_file_variables_type",
                 "dataset_file_variables_term"
               ],
@@ -689,6 +703,33 @@
                     "not": {
                       "required": [
                         "dataset_file_variables_factor_levels"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "dataset_file_variables_type": {
+                        "enum": [
+                          "numeric",
+                          "integer"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "dataset_file_variables_type"
+                    ]
+                  },
+                  "then": {
+                    "required": [
+                      "dataset_file_variables_units"
+                    ]
+                  },
+                  "else": {
+                    "not": {
+                      "required": [
+                        "dataset_file_variables_units"
                       ]
                     }
                   }

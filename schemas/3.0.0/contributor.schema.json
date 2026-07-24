@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/<your-org-or-username>/<your-repo>/main/schemas/3.0.0/contributor.schema.json",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/contributor.schema.json",
   "version": "3.0.0",
   "title": "Contributor Schema",
   "type": "object",
@@ -61,7 +61,7 @@
     }
   },
   "required": [
-    "contributor_full_name",
-    "contributor_orcid"
-  ]
+    "contributor_full_name"
+  ],
+  "$comment": "Missing-value convention: Optional properties with no value should be omitted rather than represented as null, an empty string, or an empty array. Required properties must remain present and satisfy their schema, including where null is explicitly permitted."
 }

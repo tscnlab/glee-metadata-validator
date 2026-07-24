@@ -61,7 +61,6 @@
     }
   },
   "required": [
-    "contributor_full_name",
-    "contributor_orcid"
+    "contributor_full_name"
   ]
 }

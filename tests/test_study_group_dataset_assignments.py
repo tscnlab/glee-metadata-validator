@@ -1,6 +1,6 @@
 import unittest
 
-from gleam_validator import validate_study_group_datasets_link
+from glc_validator import validate_study_group_datasets_link
 
 
 class StudyGroupDatasetAssignmentTests(unittest.TestCase):

@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      VALIDATOR_IMAGE_TAG: ghcr.io/tscnlab/glee-validator:0.4.3
+      VALIDATOR_IMAGE_TAG: ghcr.io/tscnlab/glc-validator:0.5.0
 
     steps:
       - name: Checkout dataset repository

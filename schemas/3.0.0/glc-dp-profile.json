@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/<your-org-or-username>/<your-repo>/main/schemas/3.0.0/gleam-dp-profile.json",
-  "name": "gleam-dp-profile",
-  "title": "GLEAM Data Package Profile",
-  "description": "Frictionless profile for GLEAM data packages. Requires core resources and allows additional resources.",
+  "$id": "https://raw.githubusercontent.com/tscnlab/glc-metadata-validator/main/schemas/3.0.0/glc-dp-profile.json",
+  "name": "glc-dp-profile",
+  "title": "GLC Data Package Profile",
+  "description": "Frictionless profile for GLC data packages. Requires core resources and allows additional resources.",
   "version": "3.0.0",
   "type": "object",
   "allOf": [
@@ -21,7 +21,7 @@
         "schema_version": {
           "type": "string",
           "const": "3.0.0",
-          "description": "Release version of the GLEAM metadata standard used by this package."
+          "description": "Release version of the GLC metadata standard used by this package."
         },
         "profile": {
           "type": "string",
@@ -30,13 +30,13 @@
               "const": "data-package"
             },
             {
-              "pattern": "^schemas/3\\.0\\.0/gleam-dp-profile\\.json$"
+              "pattern": "^schemas/3\\.0\\.0/glc-dp-profile\\.json$"
             },
             {
-              "pattern": "^gleam-dp-profile\\.json$"
+              "pattern": "^glc-dp-profile\\.json$"
             },
             {
-              "pattern": "^(https?|file)://.*/gleam-dp-profile\\.json$"
+              "pattern": "^(https?|file)://.*/glc-dp-profile\\.json$"
             }
           ],
           "description": "Path/URL to the package profile, or the canonical 'data-package' alias."
@@ -66,7 +66,7 @@
                       "device_datasheets",
                       "participant_characteristics"
                     ],
-                    "description": "Canonical resource name recognized by the GLEAM profile. Some canonical resources are required; others are optional."
+                    "description": "Canonical resource name recognized by the GLC profile. Some canonical resources are required; others are optional."
                   },
                   "path": {
                     "type": "string",
